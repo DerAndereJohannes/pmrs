@@ -1,0 +1,17 @@
+[package]
+name = "ocel"
+version = "0.1.0"
+edition = "2021"
+
+homepage = "https://github.com/DerAndereJohannes/rust-ocel"
+description = "Rust support to the Object-Centric Event Logs (OCEL) standard in process mining. Includes a library and a small cli-interface."
+repository = "https://github.com/DerAndereJohannes/rust-ocel"
+keywords = ["process-mining", "data-mining", "data-science", "machine-learning", "performance"]
+categories = ["data-structures", "concurrency", "command-line-utilities", "science"]
+license = "GNU General Public License v3.0"
+
+
+[dependencies]
+serde_json = "1.0.70"
+jsonschema = "0.13.2"
+clap = {version = "2.33", features = ["yaml"]}
