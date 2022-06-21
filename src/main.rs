@@ -1,6 +1,7 @@
 use clap::load_yaml;
 use clap::App;
-use ocel::validation::{validate_ocel, validate_ocel_verbose};
+use ocel::objects::ocel::validator::{validate_ocel, validate_ocel_verbose};
+
 
 fn main() {
     let cli_yaml = load_yaml!("cli.yaml");

@@ -1,7 +1,6 @@
-mod variants;
+pub(crate) mod variants;
 use std::error::Error;
-use crate::validation::variants::jsonocel::{validate_json, validate_json_verbose};
-
+use crate::objects::ocel::validator::variants::jsonocel::{validate_json, validate_json_verbose};
 
 pub fn validate_ocel(file_path: &str) -> Result<bool, Box<dyn Error>>{
     return validate_json(file_path);
