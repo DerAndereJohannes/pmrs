@@ -1,4 +1,3 @@
-use std::panic;
 use std::{collections::hash_map::Entry, vec};
 use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
 use serde_json::Value;
@@ -25,11 +24,10 @@ pub enum Relations {
 impl Relations {
     fn collect<'a>(&self, log: &Ocel, ocdg: &Ocdg, eid: &'a str, oid1: &'a str, oid2: &'a str) -> Vec<(&'a str, &'a str)> {
         let mut edges: Vec<(&str, &str)> = vec![];
-        let src_oe = ocdg.get_oe(&oid1).unwrap();
-        let tar_oe = ocdg.get_oe(&oid2).unwrap();
-        let src_type = ocdg.get_node_type(&oid1).unwrap();
-        let tar_type = ocdg.get_node_type(&oid1).unwrap();
-
+        let src_oe = &ocdg.node_attributes.get(&oid1).unwrap().object_events;
+        let tar_oe = &ocdg.node_attributes.get(&oid2).unwrap().object_events;
+        let src_type = &ocdg.node_attributes.get(&oid1).unwrap().node_type;
+        let tar_type = &ocdg.node_attributes.get(&oid2).unwrap().node_type;
         
         match self {
             Relations::INTERACTS => {
@@ -78,9 +76,10 @@ impl Relations {
                    &eid == tar_oe.first().unwrap() {
                     let omap = &log.events[&eid.to_string()].omap;
                     let children: Vec<_> = omap.iter()
-                                               .filter(|o| &src_type == &log.objects[&o.to_string()].obj_type.as_str() && 
+                                               .filter(|o| src_type == &log.objects[&o.to_string()].obj_type.as_str() && 
                                                             o != &oid1 &&
-                                                           &eid == ocdg.get_oe(o).unwrap().first().unwrap())
+                                                           // &eid == ocdg.get_oe(o).unwrap().first().unwrap())
+                                                           &eid == ocdg.node_attributes.get(o as &str).unwrap().object_events.first().unwrap())
                                                .collect();
 
                     if children.len() > 1 {
@@ -139,7 +138,6 @@ impl Relations {
     
 }
 
-pub struct Edge(String, String);
 
 #[derive(Debug)]
 pub enum NodeValue<'a> {
@@ -148,10 +146,16 @@ pub enum NodeValue<'a> {
     ATTRSTR(&'a str)
 }
 
+#[derive(Debug, Default)]
+pub struct NodeInfo<'a> {
+    pub node_type: &'a str,
+    pub object_events: Vec<&'a str>
+}
+
 pub struct Ocdg<'a> {
     pub net: DiGraph<&'a str, &'a str>,
-    pub edge_attributes: AHashMap<&'a str, AHashMap<&'a str, NodeValue<'a>>>,
-    pub node_attributes: AHashMap<&'a str, AHashMap<&'a str, NodeValue<'a>>>,
+    pub edge_attributes: AHashMap<&'a str, NodeInfo<'a>>,
+    pub node_attributes: AHashMap<&'a str, NodeInfo<'a>>,
     pub inodes: AHashMap<&'a str, NodeIndex>,
     pub iedges: AHashMap<(&'a str, &'a str), EdgeIndex>,
     pub irels: AHashMap<(&'a str, &'a str), AHashMap<&'a Relations, Vec<&'a str>>>
@@ -174,54 +178,15 @@ impl Default for Ocdg<'_> {
 impl<'a> Ocdg<'a> {
 
     fn init_object_key(&mut self, oid: &'a str) {
-        self.node_attributes.insert(&oid, AHashMap::<&str, NodeValue>::new());
+        self.node_attributes.insert(&oid, NodeInfo::default());
     }
 
-    fn add_object_value(&mut self, oid: &'a str, key: &'a str, value: NodeValue<'a>) {
-        let oid_root = self.node_attributes.get_mut(&oid).unwrap();
-
-        oid_root.entry(key)
-                .or_insert(value);
-
-
-    }
 
     fn add_eid_to_oe(&mut self, oid: &'a str, eid: &'a String) {
-        let oe_entry = self.node_attributes.entry(&oid).or_default().entry("object_events");
-        match oe_entry {
-            Entry::Vacant(_e) => { panic!("The object seems to have skipped initialization!"); },
-            Entry::Occupied(mut e) => { 
-                if let NodeValue::OE(oe) = e.get_mut() {
-                    oe.push(eid.as_str());
-                } 
-            
-            }
-
-        }
-    }
-
-    fn get_node_value(&self, node: &'a str, attr: &'a str) -> Option<&NodeValue> {
-        Some(&self.node_attributes[&node][&attr])
+        let oe_entry: &mut Vec<&str> = &mut self.node_attributes.entry(&oid).or_default().object_events;
+        oe_entry.push(eid.as_str());
 
     }
-
-    fn get_oe(&self, node: &'a str) -> Option<&Vec<&str>> {
-        if let NodeValue::OE(oe) = self.get_node_value(node, "object_events").unwrap() {
-            Some(oe)
-        } else {
-            None
-        }
-    }
-
-    fn get_node_type(&self, node: &'a str) -> Option<&str> {
-        if let NodeValue::ATTRSTR(otype) = self.get_node_value(node, "type").unwrap() {
-            Some(otype)
-        } else {
-            None
-        }
-    }
-
-
 
     fn apply_new_edges(&mut self, new_edges: Vec<(&'a str, &'a str)>, eid: &'a str, rel: &'a Relations) {
          for edge in &new_edges {
@@ -251,8 +216,9 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
                 let new_node = ocdg.net.add_node(&oid_str);
                 ocdg.init_object_key(&oid_str);
                 ocdg.inodes.entry(&oid_str).or_insert(new_node);
-                ocdg.add_object_value(&oid_str, "type", NodeValue::ATTRSTR(&log.objects[&oid_str.to_string()].obj_type)); 
-                ocdg.add_object_value(&oid_str, "object_events", NodeValue::OE(vec![])); 
+                let curr_obj = &log.objects[&oid_str.to_string()];
+                ocdg.node_attributes.entry(&oid_str).or_default().node_type = &curr_obj.obj_type;
+                ocdg.node_attributes.entry(&oid_str).or_default().object_events = vec![];
 
             }
             
