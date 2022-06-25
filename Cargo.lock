@@ -684,6 +684,7 @@ dependencies = [
 name = "ocel"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "chrono",
  "clap",
  "indexmap",

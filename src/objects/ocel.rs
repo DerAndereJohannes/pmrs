@@ -5,18 +5,18 @@ use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use std::collections::{HashMap, HashSet};
+use ahash::{AHashMap, AHashSet};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Ocel {
     #[serde(alias = "ocel:global-log", rename(serialize = "ocel:global-log"))]
-    pub global_log: HashMap<String, Value>,
+    pub global_log: AHashMap<String, Value>,
     #[serde(alias = "ocel:global-event", rename(serialize = "ocel:global-event"))]
-    pub global_event: HashMap<String, Value>,
+    pub global_event: AHashMap<String, Value>,
     #[serde(alias = "ocel:global-object", rename(serialize = "ocel:global-object"))]
-    pub global_object: HashMap<String, Value>,
+    pub global_object: AHashMap<String, Value>,
     #[serde(alias = "ocel:objects", rename(serialize = "ocel:objects"))]
-    pub objects: HashMap<String, OcelObject>,
+    pub objects: AHashMap<String, OcelObject>,
     #[serde(alias = "ocel:events", rename(serialize = "ocel:events"))]
     pub events: IndexMap<String, OcelEvent>
 }
@@ -26,7 +26,7 @@ pub struct OcelObject{
     #[serde(alias = "ocel:type", rename(serialize = "ocel:type"))]
     pub obj_type: String,
     #[serde(alias = "ocel:ovmap", rename(serialize = "ocel:ovmap"))]
-    pub ovmap: HashMap<String, Value>
+    pub ovmap: AHashMap<String, Value>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,8 +36,8 @@ pub struct OcelEvent {
     #[serde(alias = "ocel:timestamp", rename(serialize = "ocel:timestamp"))]
     pub timestamp: DateTime<Utc>,
     #[serde(alias = "ocel:omap", rename(serialize = "ocel:omap"))]
-    pub omap: HashSet<String>,
+    pub omap: AHashSet<String>,
     #[serde(alias = "ocel:vmap", rename(serialize = "ocel:vmap"))]
-    pub vmap: HashMap<String, Value>
+    pub vmap: AHashMap<String, Value>
 
 }
