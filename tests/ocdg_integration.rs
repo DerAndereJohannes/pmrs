@@ -8,8 +8,9 @@ fn test_ocdg_generation(){
     let import_time = Instant::now();
     // let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min.jsonocel").unwrap();
     let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
-
     println!("Importing the OCEL took {:?}", import_time.elapsed());
+    // println!("{:?}", &log.objects);
+    // println!("{:?}", &log.events);
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
     let relations: Vec<Relations> = vec![Relations::INTERACTS, 
                                          Relations::DESCENDANTS,
@@ -27,6 +28,9 @@ fn test_ocdg_generation(){
     let ocdg_time = Instant::now();
     let _net: Ocdg = generate_ocdg(&log, &relations);
     println!("Generating the OCDG took {:?}", ocdg_time.elapsed());
+    // println!("{:?}", _net.inodes);
+    // println!("{:?}", _net.iedges);
+    // println!("{:?}", _net.irels);
 
     assert!(true)
 }
