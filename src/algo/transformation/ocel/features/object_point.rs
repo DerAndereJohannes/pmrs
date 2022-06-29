@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::str::FromStr;
 use ahash::AHashSet;
 use petgraph::EdgeDirection::Outgoing;
 use itertools::Itertools;
 use petgraph::graph::NodeIndex;
+use serde_json::Value;
 
 use crate::objects::ocel::Ocel;
 use crate::objects::ocdg::Ocdg;
@@ -57,14 +59,35 @@ pub fn unique_neighbor_count(ocdg: &Ocdg, oid: usize) -> usize {
                                                    .count()
 }
 
-pub fn activity_existence<'a>(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<&'a str> {
-    let curr_oid: NodeIndex = ocdg.inodes[&oid];
-    let activities: &AHashSet<String> = &ocel.activities;
-
-    let mut activity_vec: Vec<&str> = vec![];
-    
-    activity_vec
-
+pub fn activity_existence(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<u8> {
+    let oe_activities: AHashSet<&String> = AHashSet::from_iter(ocdg.node_attributes[&oid].object_events.iter()
+                                            .map(|oe| &ocel.events[&oe].activity));
+    ocel.activities.iter()
+                   .map(|act| {if oe_activities.contains(act) {1} else {0}})
+                   .collect_vec()
 }
 
+
+pub fn activity_existence_count(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<usize> {
+    let oe_activities: HashMap<&String, usize> = ocdg.node_attributes[&oid].object_events.iter()
+                                                                                          .map(|oe| &ocel.events[&oe].activity)
+                                                                                          .counts();
+    ocel.activities.iter()
+              .map(|act| {match oe_activities.get(act) {
+                            Some(v) => *v,
+                            None => 0
+                        }})
+              .collect_vec()
+}
+
+pub fn activity_value_operator(ocel: &Ocel, ocdg: &Ocdg, oid: usize, attr: String) -> f64 {
+    ocdg.node_attributes[&oid].object_events.iter()
+                                            .filter(|oe| !ocel.events[&oe].vmap.contains_key(&attr))
+                                            .map(|oe| match &ocel.events[&oe].vmap[&attr] {
+                                                        Value::Number(v) => v.as_f64().unwrap(),
+                                                        _ => 0.0
+                                            })
+                                            .sum::<f64>() //change for operator
+
+}
 
