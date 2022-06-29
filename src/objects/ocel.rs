@@ -50,7 +50,8 @@ pub struct Ocel {
     pub global_event: AHashMap<String, Value>,
     pub global_object: AHashMap<String, Value>,
     pub events: IntMap<usize, OcelEvent>,
-    pub objects: IntMap<usize, OcelObject>
+    pub objects: IntMap<usize, OcelObject>,
+    pub activities: AHashSet<String>
 }
 
 

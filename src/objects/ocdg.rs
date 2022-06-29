@@ -324,7 +324,6 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
                  })
                      .flatten()
                      .collect::<Vec<(usize, usize, EventAdd, Relations)>>());
-        // println!("{:?}", &new_edges);
     }
 
     for edge in new_edges {

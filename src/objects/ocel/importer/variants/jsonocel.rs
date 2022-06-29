@@ -1,5 +1,5 @@
 use crate::objects::ocel::{Ocel, OcelSerde, OcelEvent, OcelObject};
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use nohash_hasher::{IntMap, IntSet};
 use std::fs::File;
 use std::io::Read;
@@ -9,7 +9,7 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
     let mut s = String::new();
     File::open(file_path).unwrap().read_to_string(&mut s).unwrap();
     let log: OcelSerde = serde_json::from_str(&s).unwrap();
-    let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default() };
+    let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default(), activities: AHashSet::new() };
 
     let mut oid_nh: usize = usize::MIN; 
     let mut temp_matcher: AHashMap<String, usize> = AHashMap::new();
@@ -21,6 +21,7 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
 
     let mut eid_nh: usize = usize::MIN;
     for (eid, data) in log.events {
+        log_internal.activities.insert(data.activity.clone());
         let mut fast_event = OcelEvent {eid, activity: data.activity, timestamp: data.timestamp, vmap: data.vmap, omap: IntSet::default()};
 
         for oid in data.omap.iter() {
