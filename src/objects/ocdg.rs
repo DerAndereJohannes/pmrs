@@ -2,6 +2,7 @@ use std::{collections::hash_map::Entry, vec};
 use petgraph::{graph::{DiGraph, NodeIndex, EdgeIndex, Neighbors}, EdgeDirection::Outgoing};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
+use rayon::prelude::*;
 
 use super::ocel::Ocel;
 
@@ -125,17 +126,21 @@ impl Relations {
                 }
             },
             Relations::COBIRTH => { // one time
+                if oid1 < oid2 {
                 let src_e = src_oe.first().unwrap();
                 if src_e == tar_oe.first().unwrap() {
                     to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
                     to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
                 }
+                }
             },
             Relations::CODEATH => { // one time
+                if oid1 < oid2 {
                 let src_e = src_oe.last().unwrap();
                 if src_e == tar_oe.last().unwrap() {
                     to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::CODEATH));
                     to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::CODEATH));
+                }
                 }
             },
             Relations::INHERITANCE => {
@@ -168,6 +173,7 @@ impl Relations {
                    }
             },
             Relations::PEELER => {
+                if oid1 < oid2  {
                     let shorter_oe = if src_oe.len() > tar_oe.len() {tar_oe} else {src_oe};
                     let mut shared_events: IntSet<usize> = IntSet::default();
                     let mut failed: bool = false;
@@ -184,8 +190,10 @@ impl Relations {
                         to_add.push((oid1, oid2, EventAdd::MULTI(shared_events.to_owned()), Relations::PEELER));
                         to_add.push((oid2, oid1, EventAdd::MULTI(shared_events), Relations::PEELER));
                     }
+                }
             },
             Relations::ENGAGES => {
+                if oid1 < oid2 {
                     let src_oe_set: IntSet<_> = IntSet::<usize>::from_iter(src_oe.clone());
                     let tar_oe_set: IntSet<_> = IntSet::<usize>::from_iter(tar_oe.clone());
                     if !tar_oe_set.contains(src_oe.first().unwrap()) &&
@@ -196,6 +204,7 @@ impl Relations {
                             to_add.push((oid1, oid2, EventAdd::MULTI(shared_events.to_owned()), Relations::ENGAGES));
                             to_add.push((oid2, oid1, EventAdd::MULTI(shared_events), Relations::ENGAGES));
                        }
+                }
 
             },
             _ => {}
@@ -205,7 +214,7 @@ impl Relations {
 }
 
 
-
+#[derive(Debug)]
 pub enum EventAdd {
     SINGLE(usize),
     MULTI(IntSet<usize>)
@@ -310,32 +319,41 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
         }
     }
 
+
     for edge in new_edges {
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
 
-    new_edges = vec![];
+    new_edges = ocdg.inodes.par_iter()
+                           .map(|(oid, node)| whole_instance_edges(&log, &ocdg, oid, node, &rel_whole, &rel_inst))
+                           .flatten()
+                           .collect();
     
-    for (oid1, node) in &ocdg.inodes {
-        let neighborhood = ocdg.net.neighbors_directed(*node, Outgoing).to_owned();
-        for rel in rel_whole.clone().iter() {
-            new_edges.extend(rel.execute_whole(&log, &ocdg, *oid1, &neighborhood));
-        }
-        let mut neighbor_walker = neighborhood.detach();
-        while let Some(neigh) = &neighbor_walker.next_node(&ocdg.net){
-            let oid2 = ocdg.net.node_weight(*neigh).unwrap();
-            if ocdg.irels.get(&*oid1).unwrap().get(&*oid2).unwrap().len() == 1 {
-                for rel in &rel_inst {
-                    new_edges.extend(rel.execute(&log, &ocdg, *oid1, *oid2));
-                }
-            }
-        }
-
-    }
     for edge in new_edges {
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
 
 
     ocdg
+}
+
+
+fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, node: &NodeIndex, rel_whole: &Vec<&Relations>, rel_inst: &Vec<&Relations>) -> Vec<(usize, usize, EventAdd, Relations)> {
+        let mut oid_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![];
+        let neighborhood = ocdg.net.neighbors_directed(*node, Outgoing);
+        for rel in rel_whole {
+            oid_edges.extend(rel.execute_whole(&log, &ocdg, *oid1, &neighborhood));
+        }
+        let mut neighbor_walker = neighborhood.detach();
+        while let Some(neigh) = &neighbor_walker.next_node(&ocdg.net){
+            let oid2 = ocdg.net.node_weight(*neigh).unwrap();
+            if ocdg.irels.get(&oid1).unwrap().get(&*oid2).unwrap().len() > 0 {
+                for rel in rel_inst {
+                    oid_edges.extend(rel.execute(&log, &ocdg, *oid1, *oid2));
+                }
+            }
+
+        }
+        oid_edges
+
 }
