@@ -64,16 +64,17 @@ impl Relations {
 
                 match tar_oe_test {
                     Some(tar) => {
-                        if src_oe.len() > 0 && tar.object_events.len() == 0 {
+                        if src_oe.len() > 1 && tar.object_events.len() == 1 {
                             to_add.push((oid1, oid2, EventAdd::SINGLE(eid), Relations::DESCENDANTS));
                         }
                     },
                     None => {
-                        if src_oe.len() > 0 {
+                        if src_oe.len() > 1 {
                             to_add.push((oid1, oid2, EventAdd::SINGLE(eid), Relations::DESCENDANTS));
                         }
                     }
                 }
+                // println!("{:?} {:?} {:?} {:?} {:?}", src_oe, tar_oe_test, oid1, oid2, &to_add);
             },
             _ => {},
         }
@@ -292,7 +293,7 @@ impl<'a> Ocdg<'a> {
 pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'a> {
     let mut ocdg: Ocdg = Ocdg::default();
     let mut new_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![]; 
-    let rel_prim: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
+    // let rel_prim: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
     let rel_inst: Vec<_> = relations.iter().filter(|r| r.relation_type() == 2).collect();
     let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 3).collect();
 
@@ -307,18 +308,24 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
                 ocdg.node_attributes.entry(*oid).or_default().object_events = vec![];
 
             }
-            
-            for oid2 in &data.omap {
-                if oid != oid2 {
-                    for rel in &rel_prim {
-                        new_edges.extend(rel.execute_primitive(&ocdg, *oid, *oid2, *eid));
-                    }
-                }
-            } 
             ocdg.add_eid_to_oe(*oid, *eid);
         }
+        new_edges.extend(
+            data.omap.iter()
+                     .map(|oid1| {
+                        let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = vec![];
+                        for oid2 in &data.omap {
+                            if oid1 != oid2 {
+                                to_add.extend(Relations::INTERACTS.execute_primitive(&ocdg, *oid1, *oid2, *eid));
+                                to_add.extend(Relations::DESCENDANTS.execute_primitive(&ocdg, *oid1, *oid2, *eid));
+                            }
+                        }
+                        to_add
+                 })
+                     .flatten()
+                     .collect::<Vec<(usize, usize, EventAdd, Relations)>>());
+        // println!("{:?}", &new_edges);
     }
-
 
     for edge in new_edges {
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
