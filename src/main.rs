@@ -1,6 +1,6 @@
 use clap::load_yaml;
 use clap::App;
-use ocel::objects::ocel::validator::{validate_ocel, validate_ocel_verbose};
+use process_rust::objects::ocel::validator::{validate_ocel, validate_ocel_verbose};
 
 
 fn main() {

@@ -1,5 +1,5 @@
 [package]
-name = "ocel"
+name = "process_rust"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,8 +19,11 @@ nohash-hasher = "0.2"
 rayon = "1.5"
 itertools = "0.10"
 array_tool = "1.0.3"
+streaming-stats = "0.2"
 chrono = { version = "0.4", features = ["serde"]}
 ahash = "0.7"
 jsonschema = "0.13"
 petgraph = "0.6"
+petgraph-graphml = "3.0"
+num-traits = "0.2"
 clap = {version = "2.33", features = ["yaml"]}

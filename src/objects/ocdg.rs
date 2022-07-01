@@ -1,7 +1,9 @@
 use std::{collections::hash_map::Entry, vec};
+use ahash::AHashMap;
 use petgraph::{graph::{DiGraph, NodeIndex, EdgeIndex, Neighbors}, EdgeDirection::Outgoing};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
+use petgraph_graphml::GraphMl;
 use rayon::prelude::*;
 
 use super::ocel::Ocel;
@@ -74,7 +76,6 @@ impl Relations {
                         }
                     }
                 }
-                // println!("{:?} {:?} {:?} {:?} {:?}", src_oe, tar_oe_test, oid1, oid2, &to_add);
             },
             _ => {},
         }
@@ -339,6 +340,8 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
 
+    export_graphml(&log, &ocdg);
+
 
     ocdg
 }
@@ -361,5 +364,19 @@ fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, node: &NodeIndex, 
 
         }
         oid_edges
+
+}
+
+
+fn export_graphml(ocel: &Ocel, ocdg: &Ocdg) {
+    let graphml = GraphMl::new(&ocdg.net)
+                        .pretty_print(true)
+                        .export_node_weights(Box::new(|node|{
+                            println!("{}", node);
+                            vec![
+                                ("name".into(), node.to_string().into()),
+                            ]
+                        }));
+    println!("{}", graphml.to_string());
 
 }
