@@ -1,28 +1,41 @@
-use std::{collections::hash_map::Entry, vec};
-use ahash::AHashMap;
+pub(crate) mod variants;
+pub mod importer;
+pub mod exporter;
+pub(crate) mod generation;
+
+use std::{collections::hash_map::Entry, vec, fmt};
 use petgraph::{graph::{DiGraph, NodeIndex, EdgeIndex, Neighbors}, EdgeDirection::Outgoing};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
 use petgraph_graphml::GraphMl;
 use rayon::prelude::*;
+use num_enum::{TryFromPrimitive, IntoPrimitive};
+use strum::EnumIter;
 
 use super::ocel::Ocel;
 
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive, EnumIter)]
+#[repr(u8)]
 pub enum Relations {
-    INTERACTS = 1,
-    COLIFE = 2,
-    COBIRTH = 3,
-    CODEATH = 4,
-    DESCENDANTS = 5,
-    INHERITANCE = 6,
-    CONSUMES = 7,
-    SPLIT = 8,
-    MERGE = 9,
-    MINION = 10,
-    PEELER = 11,
-    ENGAGES = 12
+    INTERACTS = 0,
+    COLIFE = 1,
+    COBIRTH = 2,
+    CODEATH = 3,
+    DESCENDANTS = 4,
+    INHERITANCE = 5,
+    CONSUMES = 6,
+    SPLIT = 7,
+    MERGE = 8,
+    MINION = 9,
+    PEELER = 10,
+    ENGAGES = 11
+}
+
+impl fmt::Display for Relations {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Relations {
@@ -38,18 +51,18 @@ impl Relations {
 
     fn relation_index(&self) -> u8 {
         match self {
-            Relations::INTERACTS => 1,
-            Relations::COLIFE => 2,
-            Relations::COBIRTH => 3,
-            Relations::CODEATH => 4,
-            Relations::DESCENDANTS => 5,
-            Relations::INHERITANCE => 6,
-            Relations::CONSUMES => 7,
-            Relations::SPLIT => 8,
-            Relations::MERGE => 9,
-            Relations::MINION => 10,
-            Relations::PEELER => 11,
-            Relations:: ENGAGES => 12
+            Relations::INTERACTS => 0,
+            Relations::COLIFE => 1,
+            Relations::COBIRTH => 2,
+            Relations::CODEATH => 3,
+            Relations::DESCENDANTS => 4,
+            Relations::INHERITANCE => 5,
+            Relations::CONSUMES => 6,
+            Relations::SPLIT => 7,
+            Relations::MERGE => 8,
+            Relations::MINION => 9,
+            Relations::PEELER => 10,
+            Relations:: ENGAGES => 11
         }
     }
 
@@ -340,9 +353,6 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
 
-    export_graphml(&log, &ocdg);
-
-
     ocdg
 }
 
@@ -368,7 +378,7 @@ fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, node: &NodeIndex, 
 }
 
 
-fn export_graphml(ocel: &Ocel, ocdg: &Ocdg) {
+pub fn export_graphml(_ocel: &Ocel, ocdg: &Ocdg) {
     let graphml = GraphMl::new(&ocdg.net)
                         .pretty_print(true)
                         .export_node_weights(Box::new(|node|{

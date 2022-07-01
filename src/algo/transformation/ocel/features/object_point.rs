@@ -8,6 +8,7 @@ use serde_json::Value;
 
 use crate::objects::ocel::Ocel;
 use crate::objects::ocdg::Ocdg;
+// use super::operator::Operator;
 
 pub enum ObjectPoint {
     UniqueNeighborCount,
@@ -91,3 +92,22 @@ pub fn activity_value_operator(ocel: &Ocel, ocdg: &Ocdg, oid: usize, attr: Strin
 
 }
 
+pub fn object_type_relations_value_operator() {todo!();}
+
+pub fn object_lifetime() {todo!();}
+
+pub fn object_unit_set_ratio() {todo!();}
+
+pub fn object_average_event_interaction() {todo!()}
+
+pub fn object_type_interaction() {todo!()}
+
+pub fn object_events_directly_follows() {todo!()}
+
+pub fn object_wait_time() {todo!()}
+
+pub fn object_start_end() {todo!()}
+
+pub fn object_direct_rel_count() {todo!()}
+
+pub fn object_subgraph_count() {todo!()}

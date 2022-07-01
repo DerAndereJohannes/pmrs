@@ -5,6 +5,31 @@ use indexmap::IndexMap;
 use std::{fs::OpenOptions, io::{BufWriter, Write}, error::Error};
 
 pub(crate) fn export_json_ocel(log: &Ocel, file_path: &str) -> Result<bool, Box<dyn Error>> {
+    let log_serde: OcelSerde = generate_ocel_serde(log);
+
+    let serde_ocel = serde_json::to_string(&log_serde).unwrap();
+    let output_file = OpenOptions::new().create(true).write(true).truncate(true).open(file_path).unwrap();
+    
+    let mut f = BufWriter::new(output_file);
+    f.write_all(serde_ocel.as_bytes()).expect("Unable to write data");
+
+    Ok(true)
+}
+
+pub(crate) fn export_json_ocel_pretty(log: &Ocel, file_path: &str) -> Result<bool, Box<dyn Error>> {
+    let log_serde: OcelSerde = generate_ocel_serde(log);
+
+    let serde_ocel = serde_json::to_string_pretty(&log_serde).unwrap();
+    let output_file = OpenOptions::new().create(true).write(true).truncate(true).open(file_path).unwrap();
+    
+    let mut f = BufWriter::new(output_file);
+    f.write_all(serde_ocel.as_bytes()).expect("Unable to write data");
+
+    Ok(true)
+}
+
+
+pub(self) fn generate_ocel_serde(log: &Ocel) -> OcelSerde {
     let mut log_serde: OcelSerde = OcelSerde { global_log: log.global_log.to_owned(), global_event: log.global_event.to_owned(), global_object: log.global_object.to_owned(), objects: AHashMap::new(), events: IndexMap::new() };
 
     let mut temp_matcher: AHashMap<usize, String> = AHashMap::new();
@@ -23,13 +48,7 @@ pub(crate) fn export_json_ocel(log: &Ocel, file_path: &str) -> Result<bool, Box<
         }
         log_serde.events.insert(data.eid.to_owned(), serde_event);
     }
-
-
-    let serde_ocel = serde_json::to_string(&log_serde).unwrap();
-    let output_file = OpenOptions::new().create(true).write(true).truncate(true).open(file_path).unwrap();
     
-    let mut f = BufWriter::new(output_file);
-    f.write_all(serde_ocel.as_bytes()).expect("Unable to write data");
+    log_serde
 
-    Ok(true)
 }

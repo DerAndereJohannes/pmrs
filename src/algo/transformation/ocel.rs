@@ -1,1 +1,1 @@
-pub(crate) mod features;
+pub mod features;
