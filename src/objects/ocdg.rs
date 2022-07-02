@@ -3,7 +3,7 @@ pub mod importer;
 pub mod exporter;
 pub(crate) mod generation;
 
-use std::{collections::hash_map::Entry, vec, fmt};
+use std::{collections::hash_map::Entry, vec, fmt, str::FromStr};
 use petgraph::{graph::{DiGraph, NodeIndex, EdgeIndex, Neighbors}, EdgeDirection::Outgoing};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
@@ -37,6 +37,29 @@ impl fmt::Display for Relations {
         write!(f, "{:?}", self)
     }
 }
+
+impl FromStr for Relations {
+    type Err = ();
+
+    fn from_str(feature: &str) -> Result<Relations, Self::Err> {
+        match feature {
+            "INTERACTS" => Ok(Relations::INTERACTS),
+            "COLIFE" => Ok(Relations::COLIFE),
+            "COBIRTH" => Ok(Relations::COBIRTH),
+            "CODEATH" => Ok(Relations::CODEATH),
+            "DESCENDANTS" => Ok(Relations::DESCENDANTS),
+            "INHERITANCE" => Ok(Relations::INHERITANCE),
+            "CONSUMES" => Ok(Relations::CONSUMES),
+            "SPLIT" => Ok(Relations::SPLIT),
+            "MERGE" => Ok(Relations::MERGE),
+            "MINION" => Ok(Relations::MINION),
+            "PEELER" => Ok(Relations::PEELER),
+            "ENGAGES" => Ok(Relations::ENGAGES),
+            _ => Err(())
+        }
+    }
+}
+
 
 impl Relations {
     fn relation_type(&self) -> u8 {
@@ -237,21 +260,21 @@ pub enum EventAdd {
 
 
 #[derive(Debug, Default)]
-pub struct NodeInfo<'a> {
-    pub node_type: &'a str,
+pub struct NodeInfo {
+    pub node_type: String,
     pub object_events: Vec<usize>
 }
 
-pub struct Ocdg<'a> {
+pub struct Ocdg {
     pub net: DiGraph<usize, usize>,
-    pub edge_attributes: IntMap<usize, NodeInfo<'a>>,
-    pub node_attributes: IntMap<usize, NodeInfo<'a>>,
+    pub edge_attributes: IntMap<usize, NodeInfo>,
+    pub node_attributes: IntMap<usize, NodeInfo>,
     pub inodes: IntMap<usize, NodeIndex>,
     pub iedges: IntMap<usize, IntMap<usize, EdgeIndex>>,
     pub irels: IntMap<usize, IntMap<usize,IntMap<usize, IntSet<usize>>>>
 }
 
-impl Default for Ocdg<'_> {
+impl Default for Ocdg {
     fn default() -> Self {
         Self{
             net: DiGraph::<usize, usize>::new(),
@@ -265,7 +288,7 @@ impl Default for Ocdg<'_> {
 }
 
 
-impl<'a> Ocdg<'a> {
+impl Ocdg {
 
     fn init_object_key(&mut self, oid: usize) {
         self.node_attributes.insert(oid, NodeInfo::default());
@@ -304,7 +327,7 @@ impl<'a> Ocdg<'a> {
 
 }
 
-pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'a> {
+pub fn generate_ocdg(log: Ocel, relations: Vec<Relations>) -> Ocdg {
     let mut ocdg: Ocdg = Ocdg::default();
     let mut new_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![]; 
     // let rel_prim: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
@@ -318,7 +341,7 @@ pub fn generate_ocdg<'a>(log: &'a Ocel, relations: &'a Vec<Relations>) -> Ocdg<'
                 ocdg.init_object_key(*oid);
                 ocdg.inodes.entry(*oid).or_insert(new_node);
                 let curr_obj = &log.objects[oid];
-                ocdg.node_attributes.entry(*oid).or_default().node_type = &curr_obj.obj_type;
+                ocdg.node_attributes.entry(*oid).or_default().node_type = curr_obj.obj_type.to_owned();
                 ocdg.node_attributes.entry(*oid).or_default().object_events = vec![];
 
             }

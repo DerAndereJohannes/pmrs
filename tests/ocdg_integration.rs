@@ -5,13 +5,15 @@ use process_rust::objects::ocel::importer::import_ocel;
 use process_rust::objects::ocel::exporter::export_ocel_pretty;
 use process_rust::objects::ocdg::importer::import_ocdg;
 use std::time::Instant;
-// use petgraph::dot::Dot;
+use petgraph::dot::Dot;
 
 #[test]
 fn test_ocdg_generation(){
     let import_time = Instant::now();
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
     let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min-export.jsonocel").unwrap();
+    let ocdg: Ocdg = import_ocdg("../../Desktop/test.gexf", &log).unwrap();
+
     // let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
@@ -24,7 +26,7 @@ fn test_ocdg_generation(){
     // println!("{:?}", &log.events);
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
 
-    let relations: Vec<Relations> = vec![Relations::DESCENDANTS]; 
+    // let relations: Vec<Relations> = vec![Relations::DESCENDANTS]; 
     // let relations: Vec<Relations> = vec![Relations::INTERACTS, 
     //                                      Relations::DESCENDANTS,
     //                                      Relations::COBIRTH,
@@ -38,17 +40,17 @@ fn test_ocdg_generation(){
     //                                      Relations::SPLIT,
     //                                      Relations::MERGE];
 
-    let ocdg_time = Instant::now();
-    let _net: Ocdg = generate_ocdg(&log, &relations);
-    println!("Generating the OCDG took {:?}", ocdg_time.elapsed());
+    // let ocdg_time = Instant::now();
+    // let _net: Ocdg = generate_ocdg(&log, &relations);
+    // println!("Generating the OCDG took {:?}", ocdg_time.elapsed());
 
 
-    export_ocdg(&_net, &log, "../../Desktop/test.gexf").unwrap();
-    // println!("{:?}", _net.inodes);
+    // export_ocdg(&_net, &log, "../../Desktop/test.gexf").unwrap();
+    println!("{:?}", ocdg.inodes);
     // println!("{:?}", log.objects);
-    // println!("{:?}", _net.iedges);
-    // println!("{:?}", _net.irels);
-    // println!("{:?}", Dot::new(&_net.net));
+    // println!("{:?}", ocdg.iedges);
+    println!("{:?}", ocdg.irels);
+    println!("{:?}", Dot::new(&ocdg.net));
 
     assert!(true)
 }

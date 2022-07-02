@@ -1,10 +1,12 @@
-pub(crate) mod gexf;
+pub(crate) mod variants;
 use std::error::Error;
 
-use self::gexf::import_gexf_ocdg;
+use crate::objects::ocel::Ocel;
 
-use super::variants::gexf::Gexf;
+use self::variants::gexf::import_gexf_ocdg;
 
-pub fn import_ocdg(file_path: &str) -> Result<Gexf, Box<dyn Error>> {
-    return import_gexf_ocdg(file_path);
+use super::Ocdg;
+
+pub fn import_ocdg(file_path: &str, log: &Ocel) -> Result<Ocdg, Box<dyn Error>> {
+    return import_gexf_ocdg(file_path, log);
 }

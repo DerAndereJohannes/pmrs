@@ -29,7 +29,7 @@ pub(crate) fn export_gexf_ocdg(g: &Ocdg, log: &Ocel, file_path: &str) -> Result<
 
     for (oid, data) in &g.node_attributes {
         let mut attrvalues: Vec<AttValueGexf> = vec![];
-        attrvalues.push(AttValueGexf { attr: 0.to_string(), value: data.node_type.to_string() });
+        attrvalues.push(AttValueGexf { attr: 0.to_string(), value: data.node_type.to_owned() });
         let oe_s: Vec<String> = data.object_events.iter().map(|e_number| log.events.get(e_number).unwrap().eid.clone()).collect();
         attrvalues.push(AttValueGexf { attr: 1.to_string(), value: format!("{:?}", oe_s) });
 

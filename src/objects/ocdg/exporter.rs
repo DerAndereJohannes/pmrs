@@ -1,10 +1,10 @@
-pub(crate) mod gexf;
+pub(crate) mod variants;
 
 use std::error::Error;
 
 use crate::objects::{ocdg::variants::gexf::Gexf, ocel::Ocel};
 
-use self::gexf::{export_gexf_ocdg, export_gexf_ocdg_pretty};
+use self::variants::gexf::{export_gexf_ocdg, export_gexf_ocdg_pretty};
 
 use super::Ocdg;
 

@@ -15,6 +15,7 @@ license = "GNU General Public License v3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 quick-xml = { version = "0.23", features = ["serialize"] }
+ron = "0.7"
 num_enum = "0.5"
 strum = { version = "0.24", features = ["derive"] }
 indexmap = { version = "1.9", features = ["serde"] }
