@@ -11,10 +11,11 @@ use petgraph::dot::Dot;
 fn test_ocdg_generation(){
     let import_time = Instant::now();
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
-    let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min-export.jsonocel").unwrap();
-    let ocdg: Ocdg = import_ocdg("../../Desktop/test.gexf", &log).unwrap();
+    // let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min-export.jsonocel").unwrap();
+    // println!("{:?}", &log.objects);
+    // let ocdg: Ocdg = import_ocdg("../../Desktop/test.gexf", &log).unwrap();
 
-    // let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
+    let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
     println!("Importing the OCEL took {:?}", import_time.elapsed());
@@ -27,30 +28,31 @@ fn test_ocdg_generation(){
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
 
     // let relations: Vec<Relations> = vec![Relations::DESCENDANTS]; 
-    // let relations: Vec<Relations> = vec![Relations::INTERACTS, 
-    //                                      Relations::DESCENDANTS,
-    //                                      Relations::COBIRTH,
-    //                                      Relations::COLIFE,
-    //                                      Relations::CODEATH,
-    //                                      Relations::CONSUMES,
-    //                                      Relations::INHERITANCE,
-    //                                      Relations::PEELER,
-    //                                      Relations::ENGAGES,
-    //                                      Relations::MINION,
-    //                                      Relations::SPLIT,
-    //                                      Relations::MERGE];
+    let relations: Vec<Relations> = vec![Relations::INTERACTS, 
+                                         Relations::DESCENDANTS,
+                                         Relations::COBIRTH,
+    // let relations: Vec<Relations> = vec![Relations::COBIRTH,
+                                         Relations::COLIFE,
+                                         Relations::CODEATH,
+                                         Relations::CONSUMES,
+                                         Relations::INHERITANCE,
+                                         Relations::PEELER,
+                                         Relations::ENGAGES,
+                                         Relations::MINION,
+                                         Relations::SPLIT,
+                                         Relations::MERGE];
 
-    // let ocdg_time = Instant::now();
-    // let _net: Ocdg = generate_ocdg(&log, &relations);
-    // println!("Generating the OCDG took {:?}", ocdg_time.elapsed());
+    let ocdg_time = Instant::now();
+    let ocdg: Ocdg = generate_ocdg(&log, &relations);
+    println!("Generating the OCDG took {:?}", ocdg_time.elapsed());
 
 
     // export_ocdg(&_net, &log, "../../Desktop/test.gexf").unwrap();
-    println!("{:?}", ocdg.inodes);
+    // println!("{:?}", ocdg.inodes);
     // println!("{:?}", log.objects);
     // println!("{:?}", ocdg.iedges);
-    println!("{:?}", ocdg.irels);
-    println!("{:?}", Dot::new(&ocdg.net));
+    // println!("{:?}", ocdg.irels);
+    // println!("{:?}", Dot::new(&ocdg.net));
 
     assert!(true)
 }

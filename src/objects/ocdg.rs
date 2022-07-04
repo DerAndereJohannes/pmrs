@@ -4,10 +4,9 @@ pub mod exporter;
 pub(crate) mod generation;
 
 use std::{collections::hash_map::Entry, vec, fmt, str::FromStr};
-use petgraph::{graph::{DiGraph, NodeIndex, EdgeIndex, Neighbors}, EdgeDirection::Outgoing};
+use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
-use petgraph_graphml::GraphMl;
 use rayon::prelude::*;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use strum::EnumIter;
@@ -64,9 +63,7 @@ impl FromStr for Relations {
 impl Relations {
     fn relation_type(&self) -> u8 {
         match self {
-            Relations::INTERACTS => {1},
-            Relations::DESCENDANTS => {1},
-            Relations::SPLIT => 3,
+            Relations::SPLIT => 1,
             _ => {2}
             
         }
@@ -90,35 +87,7 @@ impl Relations {
     }
 
     
-    fn execute_primitive(&self, ocdg: &Ocdg, oid1: usize, oid2: usize, eid: usize) -> Vec<(usize, usize, EventAdd, Relations)> {
-        let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = Vec::new();
-        match self {
-            Relations::INTERACTS => {
-                to_add.push((oid1, oid2, EventAdd::SINGLE(eid), Relations::INTERACTS));
-            },
-            Relations::DESCENDANTS => {
-                let src_oe = &ocdg.node_attributes.get(&oid1).unwrap().object_events;
-                let tar_oe_test = &ocdg.node_attributes.get(&oid2);
-
-                match tar_oe_test {
-                    Some(tar) => {
-                        if src_oe.len() > 1 && tar.object_events.len() == 1 {
-                            to_add.push((oid1, oid2, EventAdd::SINGLE(eid), Relations::DESCENDANTS));
-                        }
-                    },
-                    None => {
-                        if src_oe.len() > 1 {
-                            to_add.push((oid1, oid2, EventAdd::SINGLE(eid), Relations::DESCENDANTS));
-                        }
-                    }
-                }
-            },
-            _ => {},
-        }
-        to_add
-    }
-
-    fn execute_whole(&self, _log: &Ocel, ocdg: &Ocdg, oid1: usize, neighbors: &Neighbors<usize>) -> Vec<(usize, usize, EventAdd, Relations)> {
+    fn execute_whole(&self, _log: &Ocel, ocdg: &Ocdg, oid1: usize) -> Vec<(usize, usize, EventAdd, Relations)> {
         let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = Vec::new();
         let src_oe = &ocdg.node_attributes.get(&oid1).unwrap().object_events;
         let src_type = &ocdg.node_attributes.get(&oid1).unwrap().node_type;
@@ -126,9 +95,7 @@ impl Relations {
                 Relations::SPLIT => {
                     let mut conforming_oid: IntSet<usize> = IntSet::default();
                     let src_e = src_oe.last().unwrap();
-                    let mut neighbor_walker = neighbors.detach();
-                    while let Some(neigh) = neighbor_walker.next_node(&ocdg.net) {
-                        let oid2 = ocdg.net.node_weight(neigh).unwrap();
+                    for oid2 in &ocdg.node_attributes.get(&oid1).unwrap().neighbors {
                         let neigh_oe = &ocdg.node_attributes.get(&oid2).unwrap().object_events;
                         let neigh_type = &ocdg.node_attributes.get(&oid2).unwrap().node_type;
                         if src_type == neigh_type && src_e == neigh_oe.first().unwrap() {
@@ -157,28 +124,41 @@ impl Relations {
         let tar_type = &ocdg.node_attributes.get(&oid2).unwrap().node_type;
         
         match self {
+            Relations::INTERACTS => {
+                if oid1 < oid2 {
+                    let e_set = intersection_count_sorted_vec(src_oe, tar_oe);
+                    to_add.push((oid1, oid2, EventAdd::MULTI(e_set.to_owned()), Relations::INTERACTS));
+                    to_add.push((oid2, oid1, EventAdd::MULTI(e_set), Relations::INTERACTS));
+                }
+            },
+            Relations::DESCENDANTS => {
+                if (src_oe[0] < tar_oe[0]) && src_oe.contains(&tar_oe[0]) {
+                    to_add.push((oid1, oid2, EventAdd::SINGLE(tar_oe[0]), Relations::DESCENDANTS));
+                }
+            },
             Relations::COLIFE => { // one time
-                if src_oe == tar_oe {
+                if oid1 < oid2 && src_oe == tar_oe {
                     let e_set: IntSet<usize> = IntSet::from_iter(src_oe.to_owned());
-                    to_add.push((oid1, oid2, EventAdd::MULTI(e_set), Relations::COLIFE));
+                    to_add.push((oid1, oid2, EventAdd::MULTI(e_set.to_owned()), Relations::COLIFE));
+                    to_add.push((oid2, oid1, EventAdd::MULTI(e_set), Relations::COLIFE));
                 }
             },
             Relations::COBIRTH => { // one time
                 if oid1 < oid2 {
-                let src_e = src_oe.first().unwrap();
-                if src_e == tar_oe.first().unwrap() {
-                    to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
-                    to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
-                }
+                    let src_e = src_oe.first().unwrap();
+                    if src_e == tar_oe.first().unwrap() {
+                        to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
+                        to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::COBIRTH));
+                    }
                 }
             },
             Relations::CODEATH => { // one time
                 if oid1 < oid2 {
-                let src_e = src_oe.last().unwrap();
-                if src_e == tar_oe.last().unwrap() {
-                    to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::CODEATH));
-                    to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::CODEATH));
-                }
+                    let src_e = src_oe.last().unwrap();
+                    if src_e == tar_oe.last().unwrap() {
+                        to_add.push((oid1, oid2, EventAdd::SINGLE(*src_e), Relations::CODEATH));
+                        to_add.push((oid2, oid1, EventAdd::SINGLE(*src_e), Relations::CODEATH));
+                    }
                 }
             },
             Relations::INHERITANCE => {
@@ -262,7 +242,8 @@ pub enum EventAdd {
 #[derive(Debug, Default)]
 pub struct NodeInfo {
     pub node_type: String,
-    pub object_events: Vec<usize>
+    pub object_events: Vec<usize>,
+    pub neighbors: IntSet<usize>
 }
 
 pub struct Ocdg {
@@ -295,9 +276,10 @@ impl Ocdg {
     }
 
 
-    fn add_eid_to_oe(&mut self, oid: usize, eid: usize) {
-        let oe_entry: &mut Vec<usize> = &mut self.node_attributes.entry(oid).or_default().object_events;
-        oe_entry.push(eid);
+    fn add_eid_to_oe(&mut self, log: &Ocel, oid: usize, eid: usize) {
+        let oe_entry = &mut self.node_attributes.entry(oid).or_default();
+        oe_entry.object_events.push(eid);
+        oe_entry.neighbors.extend(&log.events.get(&eid).unwrap().omap);
 
     }
 
@@ -327,12 +309,11 @@ impl Ocdg {
 
 }
 
-pub fn generate_ocdg(log: Ocel, relations: Vec<Relations>) -> Ocdg {
+pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     let mut ocdg: Ocdg = Ocdg::default();
-    let mut new_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![]; 
     // let rel_prim: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
     let rel_inst: Vec<_> = relations.iter().filter(|r| r.relation_type() == 2).collect();
-    let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 3).collect();
+    let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
 
     for (eid, data) in &log.events {
         for oid in &data.omap {
@@ -341,36 +322,22 @@ pub fn generate_ocdg(log: Ocel, relations: Vec<Relations>) -> Ocdg {
                 ocdg.init_object_key(*oid);
                 ocdg.inodes.entry(*oid).or_insert(new_node);
                 let curr_obj = &log.objects[oid];
+                ocdg.node_attributes.entry(*oid).or_default().neighbors = IntSet::default();
                 ocdg.node_attributes.entry(*oid).or_default().node_type = curr_obj.obj_type.to_owned();
                 ocdg.node_attributes.entry(*oid).or_default().object_events = vec![];
 
             }
-            ocdg.add_eid_to_oe(*oid, *eid);
+            ocdg.add_eid_to_oe(&log, *oid, *eid);
         }
-        new_edges.extend(
-            data.omap.iter()
-                     .map(|oid1| {
-                        let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = vec![];
-                        for oid2 in &data.omap {
-                            if oid1 != oid2 {
-                                to_add.extend(Relations::INTERACTS.execute_primitive(&ocdg, *oid1, *oid2, *eid));
-                                to_add.extend(Relations::DESCENDANTS.execute_primitive(&ocdg, *oid1, *oid2, *eid));
-                            }
-                        }
-                        to_add
-                 })
-                     .flatten()
-                     .collect::<Vec<(usize, usize, EventAdd, Relations)>>());
-    }
 
-    for edge in new_edges {
-        ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
-
-    new_edges = ocdg.inodes.par_iter()
-                           .map(|(oid, node)| whole_instance_edges(&log, &ocdg, oid, node, &rel_whole, &rel_inst))
+    
+    println!("{:?} {:?} {:?}", log.objects.len(), ocdg.inodes.len(), log.events.len());
+    let new_edges: Vec<(usize, usize, EventAdd, Relations)> = ocdg.inodes.par_iter()
+                           .map(|(oid, _)| whole_instance_edges(&log, &ocdg, oid, &rel_whole, &rel_inst))
                            .flatten()
                            .collect();
+
     
     for edge in new_edges {
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
@@ -380,16 +347,14 @@ pub fn generate_ocdg(log: Ocel, relations: Vec<Relations>) -> Ocdg {
 }
 
 
-fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, node: &NodeIndex, rel_whole: &Vec<&Relations>, rel_inst: &Vec<&Relations>) -> Vec<(usize, usize, EventAdd, Relations)> {
+fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, rel_whole: &Vec<&Relations>, rel_inst: &Vec<&Relations>) -> Vec<(usize, usize, EventAdd, Relations)> {
+        // println!("{:?} reporting in!", &oid1);
         let mut oid_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![];
-        let neighborhood = ocdg.net.neighbors_directed(*node, Outgoing);
         for rel in rel_whole {
-            oid_edges.extend(rel.execute_whole(&log, &ocdg, *oid1, &neighborhood));
+            oid_edges.extend(rel.execute_whole(&log, &ocdg, *oid1));
         }
-        let mut neighbor_walker = neighborhood.detach();
-        while let Some(neigh) = &neighbor_walker.next_node(&ocdg.net){
-            let oid2 = ocdg.net.node_weight(*neigh).unwrap();
-            if ocdg.irels.get(&oid1).unwrap().get(&*oid2).unwrap().len() > 0 {
+        for oid2 in &ocdg.node_attributes.get(oid1).unwrap().neighbors {
+            if oid1 != oid2 {
                 for rel in rel_inst {
                     oid_edges.extend(rel.execute(&log, &ocdg, *oid1, *oid2));
                 }
@@ -400,16 +365,21 @@ fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, node: &NodeIndex, 
 
 }
 
-
-pub fn export_graphml(_ocel: &Ocel, ocdg: &Ocdg) {
-    let graphml = GraphMl::new(&ocdg.net)
-                        .pretty_print(true)
-                        .export_node_weights(Box::new(|node|{
-                            println!("{}", node);
-                            vec![
-                                ("name".into(), node.to_string().into()),
-                            ]
-                        }));
-    println!("{}", graphml.to_string());
-
+fn intersection_count_sorted_vec(a: &[usize], b: &[usize]) -> IntSet<usize> {
+    let mut intersected: IntSet<usize> = IntSet::default();
+    let mut b_iter = b.iter();
+    if let Some(mut current_b) = b_iter.next() {
+        for current_a in a {
+            while current_b < current_a {
+                current_b = match b_iter.next() {
+                    Some(current_b) => current_b,
+                    None => return intersected,
+                };
+            }
+            if current_a == current_b {
+                intersected.insert(*current_a);
+            }
+        }
+    }
+    intersected
 }
