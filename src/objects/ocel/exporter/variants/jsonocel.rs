@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use crate::objects::ocel::{Ocel, OcelSerde, OcelEvent, OcelObject, OcelEventSerde, OcelObjectSerde};
-use ahash::{AHashMap, AHashSet};
+use ahash::{AHashMap, AHashSet, RandomState};
 use indexmap::IndexMap;
 use std::{fs::OpenOptions, io::{BufWriter, Write}, error::Error};
 
@@ -30,7 +30,8 @@ pub(crate) fn export_json_ocel_pretty(log: &Ocel, file_path: &str) -> Result<boo
 
 
 pub(self) fn generate_ocel_serde(log: &Ocel) -> OcelSerde {
-    let mut log_serde: OcelSerde = OcelSerde { global_log: log.global_log.to_owned(), global_event: log.global_event.to_owned(), global_object: log.global_object.to_owned(), objects: AHashMap::new(), events: IndexMap::new() };
+    let hasher = RandomState::new();
+    let mut log_serde: OcelSerde = OcelSerde { global_log: log.global_log.to_owned(), global_event: log.global_event.to_owned(), global_object: log.global_object.to_owned(), objects: AHashMap::new(), events: IndexMap::with_hasher(hasher) };
 
     let mut temp_matcher: AHashMap<usize, String> = AHashMap::new();
 

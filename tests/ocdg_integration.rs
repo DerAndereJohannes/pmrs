@@ -11,11 +11,11 @@ use petgraph::dot::Dot;
 fn test_ocdg_generation(){
     let import_time = Instant::now();
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
-    // let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min-export.jsonocel").unwrap();
+    let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min-export.jsonocel").unwrap();
     // println!("{:?}", &log.objects);
     // let ocdg: Ocdg = import_ocdg("../../Desktop/test.gexf", &log).unwrap();
 
-    let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
+    // let log: Ocel = import_ocel("../../Downloads/p2p-rfc3339.jsonocel").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
     // let g = import_ocdg("../../Desktop/example.gexf").unwrap();
     println!("Importing the OCEL took {:?}", import_time.elapsed());

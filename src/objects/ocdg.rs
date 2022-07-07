@@ -10,6 +10,7 @@ use array_tool::vec::Intersect;
 use rayon::prelude::*;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use strum::EnumIter;
+use std::time::Instant;
 
 use super::ocel::Ocel;
 
@@ -311,10 +312,10 @@ impl Ocdg {
 
 pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     let mut ocdg: Ocdg = Ocdg::default();
-    // let rel_prim: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
     let rel_inst: Vec<_> = relations.iter().filter(|r| r.relation_type() == 2).collect();
     let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
 
+    let eidloop = Instant::now();
     for (eid, data) in &log.events {
         for oid in &data.omap {
             if !ocdg.node_attributes.contains_key(oid) {
@@ -331,17 +332,22 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
         }
 
     }
+
+    println!("eidloop took: {:?}", eidloop.elapsed());
     
-    println!("{:?} {:?} {:?}", log.objects.len(), ocdg.inodes.len(), log.events.len());
+    let oidloop = Instant::now();
     let new_edges: Vec<(usize, usize, EventAdd, Relations)> = ocdg.inodes.par_iter()
                            .map(|(oid, _)| whole_instance_edges(&log, &ocdg, oid, &rel_whole, &rel_inst))
                            .flatten()
                            .collect();
 
+    println!("oidloop took: {:?}", oidloop.elapsed());
+    let edgeloop = Instant::now();
     
     for edge in new_edges {
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
     }
+    println!("edgeloop took: {:?}", edgeloop.elapsed());
 
     ocdg
 }

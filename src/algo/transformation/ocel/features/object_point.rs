@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use ahash::AHashSet;
+use chrono::Duration;
 use petgraph::EdgeDirection::Outgoing;
 use itertools::Itertools;
 use petgraph::graph::NodeIndex;
@@ -94,13 +95,66 @@ pub fn activity_value_operator(ocel: &Ocel, ocdg: &Ocdg, oid: usize, attr: Strin
 
 pub fn object_type_relations_value_operator() {todo!();}
 
-pub fn object_lifetime() {todo!();}
+pub fn object_lifetime(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> Duration {
+    if let Some(node) = ocdg.node_attributes.get(oid) {
+        let initial = node.object_events.first().unwrap();
+        let end = node.object_events.last().unwrap();
 
-pub fn object_unit_set_ratio() {todo!();}
+        if ocel.events.contains_key(&initial) && ocel.events.contains_key(&end) {
+            return ocel.events[&end].timestamp - ocel.events[&initial].timestamp;
+        }
+    }
+    Duration::zero()
+}
 
-pub fn object_average_event_interaction() {todo!()}
+pub fn object_unit_set_ratio(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> f64 {
+    if let Some(node) = ocdg.node_attributes.get(oid) {
+        let unitset = node.object_events.iter()
+                          .map(|ev| {
+                              if ocel.events.contains_key(ev) {
+                                  for oid2 in &ocel.events[ev].omap {
+                                        if oid != oid2 && ocel.objects[oid].obj_type == ocel.objects[oid2].obj_type {
+                                            return 0;
+                                        }
+                                  }
+                              } else {
+                                return 0;
+                              }
+                              1
+                          }).fold(0, |accum, item| accum + item);
 
-pub fn object_type_interaction() {todo!()}
+        return (unitset / node.object_events.len()) as f64
+    }
+    0.0
+}
+
+pub fn object_average_event_interaction(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> f64 {
+    if let Some(node) = ocdg.node_attributes.get(oid) {
+        let interaction = node.object_events.iter()
+                                            .map(|ev| {
+                                                if ocel.events.contains_key(ev) {
+                                                    return ocel.events[ev].omap.len() - 1;
+                                                }
+                                                0
+                                            }).fold(0, |accum, item| accum + item);
+
+        return (interaction / node.object_events.len()) as f64
+
+    }
+    0.0
+}
+
+pub fn object_type_interaction(ocdg: &Ocdg, oid: &usize, otype: &str) -> usize {
+    if let Some(node) = ocdg.inodes.get(oid) {
+        let neighs = ocdg.net.neighbors_directed(*node, Outgoing);
+        return neighs.map(|oid2| {if oid != &ocdg.net[oid2] 
+                              && otype == ocdg.node_attributes[&ocdg.net[oid2]].node_type {1} else {0}})
+              .fold(0, |accum, item| accum + item);
+
+    }
+    0
+    
+}
 
 pub fn object_events_directly_follows() {todo!()}
 

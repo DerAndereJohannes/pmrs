@@ -10,11 +10,13 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
     File::open(file_path).unwrap().read_to_string(&mut s).unwrap();
     let log: OcelSerde = serde_json::from_str(&s).unwrap();
     let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default(), activities: AHashSet::new() };
-
+    
+    println!("{:?}", &log.events);
+    println!("{:?}", &log.objects);
     let mut oid_nh: usize = usize::MIN; 
-    println!("{:?}", log.objects.len());
     let mut temp_matcher: AHashMap<String, usize> = AHashMap::new();
     for (oid, data) in log.objects {
+        // println!("{:?}", oid);
         temp_matcher.insert(oid.to_owned(), oid_nh);
         log_internal.objects.insert(oid_nh, OcelObject {oid, obj_type: data.obj_type, ovmap: data.ovmap});
         oid_nh = oid_nh + 1;

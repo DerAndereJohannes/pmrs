@@ -7,7 +7,7 @@ use nohash_hasher::{IntMap, IntSet};
 use serde_json::Value;
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
-use ahash::{AHashMap, AHashSet};
+use ahash::{AHashMap, AHashSet, RandomState};
 use std::cmp::Ordering;
 
 
@@ -22,7 +22,7 @@ pub struct OcelSerde {
     #[serde(alias = "ocel:objects", rename(serialize = "ocel:objects"))]
     pub objects: AHashMap<String, OcelObjectSerde>,
     #[serde(alias = "ocel:events", rename(serialize = "ocel:events"))]
-    pub events: IndexMap<String, OcelEventSerde>,
+    pub events: IndexMap<String, OcelEventSerde, RandomState>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
