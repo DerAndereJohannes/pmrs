@@ -7,8 +7,8 @@ use std::error::Error;
 
 pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> {
     let mut s = String::new();
-    File::open(file_path).unwrap().read_to_string(&mut s).unwrap();
-    let log: OcelSerde = serde_json::from_str(&s).unwrap();
+    File::open(file_path)?.read_to_string(&mut s)?;
+    let log: OcelSerde = serde_json::from_str(&s)?;
     let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default(), activities: AHashSet::new() };
     
     let mut oid_nh: usize = usize::MIN; 

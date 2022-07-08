@@ -1,4 +1,4 @@
-name: ocel-cli
+name: pmrs-cli
 version: "0.1.0"
 author: Johannes Herforth <johannes.herforth@rwth-aachen.de>
 about: Small cli tool to do basic commands on OCEL data.

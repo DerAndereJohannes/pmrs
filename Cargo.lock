@@ -897,6 +897,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12295df4f294471248581bc09bef3c38a5e46f1e36d6a37353621a0c6c357e1f"
 
 [[package]]
+name = "pmrs"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "array_tool",
+ "chrono",
+ "clap",
+ "indexmap",
+ "itertools",
+ "jsonschema",
+ "nohash-hasher",
+ "num-traits",
+ "num_enum",
+ "petgraph",
+ "petgraph-graphml",
+ "quick-xml",
+ "rayon",
+ "ron",
+ "serde",
+ "serde_json",
+ "streaming-stats",
+ "strum",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -943,31 +968,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba508cc11742c0dc5c1659771673afbab7a0efab23aa17e854cbab0837ed0b43"
 dependencies = [
  "unicode-xid",
-]
-
-[[package]]
-name = "process_rust"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "array_tool",
- "chrono",
- "clap",
- "indexmap",
- "itertools",
- "jsonschema",
- "nohash-hasher",
- "num-traits",
- "num_enum",
- "petgraph",
- "petgraph-graphml",
- "quick-xml",
- "rayon",
- "ron",
- "serde",
- "serde_json",
- "streaming-stats",
- "strum",
 ]
 
 [[package]]
