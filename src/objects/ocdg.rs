@@ -70,7 +70,7 @@ impl Relations {
         }
     }
 
-    fn relation_index(&self) -> u8 {
+    pub fn relation_index(&self) -> u8 {
         match self {
             Relations::INTERACTS => 0,
             Relations::COLIFE => 1,
@@ -88,16 +88,16 @@ impl Relations {
     }
 
     
-    fn execute_whole(&self, _log: &Ocel, ocdg: &Ocdg, oid1: usize) -> Vec<(usize, usize, EventAdd, Relations)> {
+    fn execute_whole(&self, log: &Ocel, ocdg: &Ocdg, neighs: &IntMap<usize, IntSet<usize>>, oid1: usize) -> Vec<(usize, usize, EventAdd, Relations)> {
         let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = Vec::new();
-        let src_oe = &ocdg.node_attributes.get(&oid1).unwrap().object_events;
+        let src_oe = &log.objects.get(&oid1).unwrap().events;
         let src_type = &ocdg.node_attributes.get(&oid1).unwrap().node_type;
             match self {
                 Relations::SPLIT => {
                     let mut conforming_oid: IntSet<usize> = IntSet::default();
                     let src_e = src_oe.last().unwrap();
-                    for oid2 in &ocdg.node_attributes.get(&oid1).unwrap().neighbors {
-                        let neigh_oe = &ocdg.node_attributes.get(&oid2).unwrap().object_events;
+                    for oid2 in neighs.get(&oid1).unwrap() {
+                        let neigh_oe = &log.objects.get(&oid2).unwrap().events;
                         let neigh_type = &ocdg.node_attributes.get(&oid2).unwrap().node_type;
                         if src_type == neigh_type && src_e == neigh_oe.first().unwrap() {
                             conforming_oid.insert(*oid2);
@@ -119,8 +119,8 @@ impl Relations {
 
     fn execute(&self, log: &Ocel, ocdg: &Ocdg, oid1: usize, oid2: usize) -> Vec<(usize, usize, EventAdd, Relations)> {
         let mut to_add: Vec<(usize, usize, EventAdd, Relations)> = Vec::new();
-        let src_oe = &ocdg.node_attributes.get(&oid1).unwrap().object_events;
-        let tar_oe = &ocdg.node_attributes.get(&oid2).unwrap().object_events;
+        let src_oe = &log.objects.get(&oid1).unwrap().events;
+        let tar_oe = &log.objects.get(&oid2).unwrap().events;
         let src_type = &ocdg.node_attributes.get(&oid1).unwrap().node_type;
         let tar_type = &ocdg.node_attributes.get(&oid2).unwrap().node_type;
         
@@ -242,11 +242,11 @@ pub enum EventAdd {
 
 #[derive(Debug, Default)]
 pub struct NodeInfo {
+    pub oid: String,
     pub node_type: String,
-    pub object_events: Vec<usize>,
-    pub neighbors: IntSet<usize>
 }
 
+#[derive(Debug, Default)]
 pub struct Ocdg {
     pub net: DiGraph<usize, usize>,
     pub edge_attributes: IntMap<usize, NodeInfo>,
@@ -256,33 +256,12 @@ pub struct Ocdg {
     pub irels: IntMap<usize, IntMap<usize,IntMap<usize, IntSet<usize>>>>
 }
 
-impl Default for Ocdg {
-    fn default() -> Self {
-        Self{
-            net: DiGraph::<usize, usize>::new(),
-            edge_attributes: IntMap::default(),
-            node_attributes: IntMap::default(),
-            inodes: IntMap::default(),
-            iedges: IntMap::default(),
-            irels: IntMap::default()
-        }
-    }
-}
-
-
 impl Ocdg {
 
     fn init_object_key(&mut self, oid: usize) {
         self.node_attributes.insert(oid, NodeInfo::default());
     }
 
-
-    fn add_eid_to_oe(&mut self, log: &Ocel, oid: usize, eid: usize) {
-        let oe_entry = &mut self.node_attributes.entry(oid).or_default();
-        oe_entry.object_events.push(eid);
-        oe_entry.neighbors.extend(&log.events.get(&eid).unwrap().omap);
-
-    }
 
     fn apply_new_edges(&mut self, edge: (usize, usize), eids: EventAdd, rel: Relations) {
             self.iedges.entry(edge.0).or_default().entry(edge.1).or_insert_with(|| self.net.add_edge(self.inodes[&edge.0], self.inodes[&edge.1], 0));
@@ -314,6 +293,7 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     let mut ocdg: Ocdg = Ocdg::default();
     let rel_inst: Vec<_> = relations.iter().filter(|r| r.relation_type() == 2).collect();
     let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
+    let mut neighbours: IntMap<usize, IntSet<usize>> = IntMap::default();
 
     let eidloop = Instant::now();
     for (eid, data) in &log.events {
@@ -323,12 +303,10 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
                 ocdg.init_object_key(*oid);
                 ocdg.inodes.entry(*oid).or_insert(new_node);
                 let curr_obj = &log.objects[oid];
-                ocdg.node_attributes.entry(*oid).or_default().neighbors = IntSet::default();
                 ocdg.node_attributes.entry(*oid).or_default().node_type = curr_obj.obj_type.to_owned();
-                ocdg.node_attributes.entry(*oid).or_default().object_events = vec![];
 
             }
-            ocdg.add_eid_to_oe(&log, *oid, *eid);
+            neighbours.entry(*oid).or_default().extend(&log.events.get(&eid).unwrap().omap);
         }
 
     }
@@ -337,7 +315,7 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     
     let oidloop = Instant::now();
     let new_edges: Vec<(usize, usize, EventAdd, Relations)> = ocdg.inodes.par_iter()
-                           .map(|(oid, _)| whole_instance_edges(&log, &ocdg, oid, &rel_whole, &rel_inst))
+                           .map(|(oid, _)| whole_instance_edges(&log, &ocdg, oid, &neighbours, &rel_whole, &rel_inst))
                            .flatten()
                            .collect();
 
@@ -353,13 +331,13 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
 }
 
 
-fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, rel_whole: &Vec<&Relations>, rel_inst: &Vec<&Relations>) -> Vec<(usize, usize, EventAdd, Relations)> {
+fn whole_instance_edges(log: &Ocel, ocdg:&Ocdg, oid1: &usize, neighs: &IntMap<usize, IntSet<usize>>, rel_whole: &Vec<&Relations>, rel_inst: &Vec<&Relations>) -> Vec<(usize, usize, EventAdd, Relations)> {
         // println!("{:?} reporting in!", &oid1);
         let mut oid_edges: Vec<(usize, usize, EventAdd, Relations)> = vec![];
         for rel in rel_whole {
-            oid_edges.extend(rel.execute_whole(&log, &ocdg, *oid1));
+            oid_edges.extend(rel.execute_whole(&log, &ocdg, neighs, *oid1));
         }
-        for oid2 in &ocdg.node_attributes.get(oid1).unwrap().neighbors {
+        for oid2 in neighs.get(oid1).unwrap() {
             if oid1 != oid2 {
                 for rel in rel_inst {
                     oid_edges.extend(rel.execute(&log, &ocdg, *oid1, *oid2));

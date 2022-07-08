@@ -60,7 +60,8 @@ pub struct Ocel {
 pub struct OcelObject{
     pub oid: String,
     pub obj_type: String,
-    pub ovmap: AHashMap<String, Value>
+    pub ovmap: AHashMap<String, Value>,
+    pub events: Vec<usize>
 }
 
 #[derive(Debug, Eq)]

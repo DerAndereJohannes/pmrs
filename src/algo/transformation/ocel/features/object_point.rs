@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use ahash::AHashSet;
+use ahash::{AHashSet, AHashMap};
 use chrono::Duration;
 use petgraph::EdgeDirection::Outgoing;
 use itertools::Itertools;
@@ -8,7 +8,7 @@ use petgraph::graph::NodeIndex;
 use serde_json::Value;
 
 use crate::objects::ocel::Ocel;
-use crate::objects::ocdg::Ocdg;
+use crate::objects::ocdg::{Ocdg, Relations};
 // use super::operator::Operator;
 
 pub enum ObjectPoint {
@@ -27,6 +27,14 @@ pub enum ObjectPoint {
     DirectRelationCount,
     SubgraphExistenceCount
 }
+
+
+impl ObjectPoint {
+    pub fn execute(&self, log: &Ocel, ocdg: &Ocdg, oid: &usize, config: AHashMap<String, Value>) {
+
+    }
+}
+
 
 
 impl FromStr for ObjectPoint {
@@ -61,20 +69,20 @@ pub fn unique_neighbor_count(ocdg: &Ocdg, oid: usize) -> usize {
                                                    .count()
 }
 
-pub fn activity_existence(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<u8> {
-    let oe_activities: AHashSet<&String> = AHashSet::from_iter(ocdg.node_attributes[&oid].object_events.iter()
-                                            .map(|oe| &ocel.events[&oe].activity));
-    ocel.activities.iter()
+pub fn activity_existence(log: &Ocel, oid: usize) -> Vec<u8> {
+    let oe_activities: AHashSet<&String> = AHashSet::from_iter(log.objects[&oid].events.iter()
+                                            .map(|oe| &log.events[&oe].activity));
+    log.activities.iter()
                    .map(|act| {if oe_activities.contains(act) {1} else {0}})
                    .collect_vec()
 }
 
 
-pub fn activity_existence_count(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<usize> {
-    let oe_activities: HashMap<&String, usize> = ocdg.node_attributes[&oid].object_events.iter()
-                                                                                          .map(|oe| &ocel.events[&oe].activity)
-                                                                                          .counts();
-    ocel.activities.iter()
+pub fn activity_existence_count(log: &Ocel, oid: usize) -> Vec<usize> {
+    let oe_activities: HashMap<&String, usize> = log.objects[&oid].events.iter()
+                                                                         .map(|oe| &log.events[&oe].activity)
+                                                                         .counts();
+    log.activities.iter()
               .map(|act| {match oe_activities.get(act) {
                             Some(v) => *v,
                             None => 0
@@ -82,38 +90,38 @@ pub fn activity_existence_count(ocel: &Ocel, ocdg: &Ocdg, oid: usize) -> Vec<usi
               .collect_vec()
 }
 
-pub fn activity_value_operator(ocel: &Ocel, ocdg: &Ocdg, oid: usize, attr: String) -> f64 {
-    ocdg.node_attributes[&oid].object_events.iter()
-                                            .filter(|oe| !ocel.events[&oe].vmap.contains_key(&attr))
-                                            .map(|oe| match &ocel.events[&oe].vmap[&attr] {
-                                                        Value::Number(v) => v.as_f64().unwrap(),
-                                                        _ => 0.0
-                                            })
-                                            .sum::<f64>() //change for operator
+pub fn activity_value_operator(log: &Ocel, oid: usize, attr: String) -> f64 {
+    log.objects[&oid].events.iter()
+                            .filter(|oe| !log.events[&oe].vmap.contains_key(&attr))
+                            .map(|oe| match &log.events[&oe].vmap[&attr] {
+                                        Value::Number(v) => v.as_f64().unwrap(),
+                                        _ => 0.0
+                                    })
+                            .sum::<f64>() //change for operator
 
 }
 
 pub fn object_type_relations_value_operator() {todo!();}
 
-pub fn object_lifetime(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> Duration {
-    if let Some(node) = ocdg.node_attributes.get(oid) {
-        let initial = node.object_events.first().unwrap();
-        let end = node.object_events.last().unwrap();
+pub fn object_lifetime(log: &Ocel, oid: &usize) -> Duration {
+    if let Some(node) = log.objects.get(oid) {
+        let initial = node.events.first().unwrap();
+        let end = node.events.last().unwrap();
 
-        if ocel.events.contains_key(&initial) && ocel.events.contains_key(&end) {
-            return ocel.events[&end].timestamp - ocel.events[&initial].timestamp;
+        if log.events.contains_key(&initial) && log.events.contains_key(&end) {
+            return log.events[&end].timestamp - log.events[&initial].timestamp;
         }
     }
     Duration::zero()
 }
 
-pub fn object_unit_set_ratio(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> f64 {
-    if let Some(node) = ocdg.node_attributes.get(oid) {
-        let unitset = node.object_events.iter()
+pub fn object_unit_set_ratio(log: &Ocel, oid: &usize) -> f64 {
+    if let Some(node) = log.objects.get(oid) {
+        let unitset = node.events.iter()
                           .map(|ev| {
-                              if ocel.events.contains_key(ev) {
-                                  for oid2 in &ocel.events[ev].omap {
-                                        if oid != oid2 && ocel.objects[oid].obj_type == ocel.objects[oid2].obj_type {
+                              if log.events.contains_key(ev) {
+                                  for oid2 in &log.events[ev].omap {
+                                        if oid != oid2 && log.objects[oid].obj_type == log.objects[oid2].obj_type {
                                             return 0;
                                         }
                                   }
@@ -123,22 +131,22 @@ pub fn object_unit_set_ratio(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> f64 {
                               1
                           }).fold(0, |accum, item| accum + item);
 
-        return (unitset / node.object_events.len()) as f64
+        return (unitset / node.events.len()) as f64
     }
     0.0
 }
 
-pub fn object_average_event_interaction(ocel: &Ocel, ocdg: &Ocdg, oid: &usize) -> f64 {
-    if let Some(node) = ocdg.node_attributes.get(oid) {
-        let interaction = node.object_events.iter()
-                                            .map(|ev| {
-                                                if ocel.events.contains_key(ev) {
-                                                    return ocel.events[ev].omap.len() - 1;
-                                                }
-                                                0
-                                            }).fold(0, |accum, item| accum + item);
+pub fn object_average_event_interaction(log: &Ocel, oid: &usize) -> f64 {
+    if let Some(node) = log.objects.get(oid) {
+        let interaction = node.events.iter()
+                                     .map(|ev| {
+                                        if log.events.contains_key(ev) {
+                                            return log.events[ev].omap.len() - 1;
+                                        }
+                                        0})
+                                     .fold(0, |accum, item| accum + item);
 
-        return (interaction / node.object_events.len()) as f64
+        return (interaction / node.events.len()) as f64
 
     }
     0.0
@@ -156,12 +164,115 @@ pub fn object_type_interaction(ocdg: &Ocdg, oid: &usize, otype: &str) -> usize {
     
 }
 
-pub fn object_events_directly_follows() {todo!()}
+pub fn object_events_directly_follows(log: &Ocel, oid: &usize) -> AHashMap<String, AHashMap<String, usize>> {
+    let mut df: AHashMap<String, AHashMap<String, usize>> = AHashMap::default();
+    if let Some(obj) = log.objects.get(oid) {
+        (0..obj.events.len() - 1).into_iter()
+                                 .for_each(|i| {
+                                    let src = &log.events[&obj.events[i]].activity;
+                                    let tar = &log.events[&obj.events[i+1]].activity;
+                                    let df_srctar = df.entry(src.to_owned())
+                                      .or_insert(AHashMap::default())
+                                      .entry(tar.to_owned())
+                                      .or_insert(0);
 
-pub fn object_wait_time() {todo!()}
+                                    *df_srctar += 1;
+                                 });
+    }
+    df
+}
 
-pub fn object_start_end() {todo!()}
+pub fn object_wait_time(log: &Ocel, oid: &usize, act1: &str, act2: &str) -> Duration {
+    let mut time_diff = Duration::zero();
+    if let Some(obj) = log.objects.get(oid) {
+        let mut ev1: usize = usize::MAX;
+        let mut ev2: usize = usize::MAX;
+        obj.events.iter().rev().for_each(|item|{
+            if let Some(curr) = log.events.get(item) {
+                if ev2 == usize::MAX {
+                    if curr.activity == act2 {
+                        ev2 = *item; 
+                    } 
+                } else if ev1 == usize::MAX {
+                    if curr.activity == act1 {
+                        ev1 = *item;
+                    }
+                } else if time_diff == Duration::zero() {
+                    time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
+                }
+            }
+        });
+    }
+    time_diff
+}
 
-pub fn object_direct_rel_count() {todo!()}
+pub fn object_oe_root(log: &Ocel, oid: &usize) -> bool {
+    if let Some(obj) = log.objects.get(oid) {
+        if let Some(root_ev) = obj.events.first() {
+            let root1 = &log.events[root_ev];
+            for oid2 in root1.omap.iter() {
+                if let Some(other) = log.objects.get(&oid2) {
+                    if let Some(root_ev2) = other.events.first() {
+                        let root2 = &log.events[root_ev2];
+                        if root1.timestamp > root2.timestamp {
+                            return false;
+                        }
+
+                    }
+                }
+                
+            }
+        
+        }
+        true
+    } else {
+        false
+    }
+    
+}
+
+
+pub fn object_oe_leaf(log: &Ocel, oid: &usize) -> bool {
+    if let Some(obj) = log.objects.get(oid) {
+        if let Some(leaf_ev) = obj.events.last() {
+            let leaf1 = &log.events[leaf_ev];
+            for oid2 in leaf1.omap.iter() {
+                if let Some(other) = log.objects.get(&oid2) {
+                    if let Some(leaf_ev2) = other.events.last() {
+                        let leaf2 = &log.events[leaf_ev2];
+                        if leaf1.timestamp < leaf2.timestamp {
+                            return false;
+                        }
+
+                    }
+                }
+                
+            }
+        
+        }
+        true
+    } else {
+        false
+    }
+    
+}
+
+
+pub fn object_direct_rel_count(ocdg: &Ocdg, oid: &usize, rel: &Relations) -> usize {
+    if let Some(obj) = ocdg.inodes.get(oid) {
+        let neighs = ocdg.net.neighbors_directed(*obj, Outgoing);
+        return neighs.enumerate().map(|(_i, neigh)| {
+            let neigh_id = &ocdg.net[neigh];
+            let conn = ocdg.irels.get(oid).unwrap().get(neigh_id).unwrap();
+            if conn.contains_key(&(rel.relation_index() as usize)) {
+                1
+            } else {
+                0
+            }
+        }).fold(0 as usize, |accum, item| accum + item);
+        
+    }
+0
+}
 
 pub fn object_subgraph_count() {todo!()}

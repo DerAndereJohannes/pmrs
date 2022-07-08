@@ -29,9 +29,6 @@ pub fn import_gexf_ocdg(file_path: &str, log: &Ocel) -> Result<Ocdg, Box<dyn Err
 
        ocdg.node_attributes.entry(*oid).or_default().node_type = obj.attvalues.attvalues[0].value.to_owned();
 
-       let oe: Vec<&str> = ron::from_str(&obj.attvalues.attvalues[1].value).unwrap();
-
-       ocdg.node_attributes.entry(*oid).or_default().object_events = oe.iter().map(|eid| *ev_index[eid]).collect();
        ocdg.inodes.entry(*oid).or_insert(new_node);
    }
 
