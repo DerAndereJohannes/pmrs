@@ -1,9 +1,9 @@
-use process_rust::objects::ocdg::exporter::export_ocdg;
-use process_rust::objects::ocdg::{Ocdg, generate_ocdg, Relations};
-use process_rust::objects::ocel::Ocel;
-use process_rust::objects::ocel::importer::import_ocel;
-use process_rust::objects::ocel::exporter::export_ocel_pretty;
-use process_rust::objects::ocdg::importer::import_ocdg;
+use pmrs::objects::ocdg::exporter::export_ocdg;
+use pmrs::objects::ocdg::{Ocdg, generate_ocdg, Relations};
+use pmrs::objects::ocel::Ocel;
+use pmrs::objects::ocel::importer::import_ocel;
+use pmrs::objects::ocel::exporter::export_ocel_pretty;
+use pmrs::objects::ocdg::importer::import_ocdg;
 use std::time::Instant;
 use petgraph::dot::Dot;
 
