@@ -9,13 +9,13 @@ use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
 use rayon::prelude::*;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
-use strum::EnumIter;
+use strum::{EnumIter, EnumString};
 use std::time::Instant;
 
 use super::ocel::Ocel;
 
 
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive, EnumIter)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive, EnumIter, EnumString)]
 #[repr(u8)]
 pub enum Relations {
     INTERACTS = 0,
@@ -38,27 +38,27 @@ impl fmt::Display for Relations {
     }
 }
 
-impl FromStr for Relations {
-    type Err = ();
+// impl FromStr for Relations {
+//     type Err = ();
 
-    fn from_str(feature: &str) -> Result<Relations, Self::Err> {
-        match feature {
-            "INTERACTS" => Ok(Relations::INTERACTS),
-            "COLIFE" => Ok(Relations::COLIFE),
-            "COBIRTH" => Ok(Relations::COBIRTH),
-            "CODEATH" => Ok(Relations::CODEATH),
-            "DESCENDANTS" => Ok(Relations::DESCENDANTS),
-            "INHERITANCE" => Ok(Relations::INHERITANCE),
-            "CONSUMES" => Ok(Relations::CONSUMES),
-            "SPLIT" => Ok(Relations::SPLIT),
-            "MERGE" => Ok(Relations::MERGE),
-            "MINION" => Ok(Relations::MINION),
-            "PEELER" => Ok(Relations::PEELER),
-            "ENGAGES" => Ok(Relations::ENGAGES),
-            _ => Err(())
-        }
-    }
-}
+//     fn from_str(feature: &str) -> Result<Relations, Self::Err> {
+//         match feature {
+//             "INTERACTS" => Ok(Relations::INTERACTS),
+//             "COLIFE" => Ok(Relations::COLIFE),
+//             "COBIRTH" => Ok(Relations::COBIRTH),
+//             "CODEATH" => Ok(Relations::CODEATH),
+//             "DESCENDANTS" => Ok(Relations::DESCENDANTS),
+//             "INHERITANCE" => Ok(Relations::INHERITANCE),
+//             "CONSUMES" => Ok(Relations::CONSUMES),
+//             "SPLIT" => Ok(Relations::SPLIT),
+//             "MERGE" => Ok(Relations::MERGE),
+//             "MINION" => Ok(Relations::MINION),
+//             "PEELER" => Ok(Relations::PEELER),
+//             "ENGAGES" => Ok(Relations::ENGAGES),
+//             _ => Err(())
+//         }
+//     }
+// }
 
 
 impl Relations {
