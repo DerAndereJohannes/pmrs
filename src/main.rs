@@ -14,7 +14,11 @@ fn main() {
             if validate_matches.is_present("verbose") {
                 match validate_ocel_verbose(input_file) {
                     Ok(v) => {
-                        println!("{}: {}", input_file, v);
+                        for (i, error) in v.iter().enumerate() {
+                            println!("Error {}: {} at {}", i+1, error.0, error.1);
+                        }
+                        
+                        println!("{}: {}", input_file, v.is_empty());
                     }
                     Err(e) => println!("There was an Error: {}", e),
                 }
