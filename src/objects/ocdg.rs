@@ -3,7 +3,9 @@ pub mod importer;
 pub mod exporter;
 pub(crate) mod generation;
 
-use std::{collections::hash_map::Entry, vec, fmt, str::FromStr};
+use std::{collections::hash_map::Entry, vec, fmt};
+use ahash::AHashSet;
+use bimap::BiMap;
 use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
 use nohash_hasher::{IntSet, IntMap};
 use array_tool::vec::Intersect;
@@ -37,29 +39,6 @@ impl fmt::Display for Relations {
         write!(f, "{:?}", self)
     }
 }
-
-// impl FromStr for Relations {
-//     type Err = ();
-
-//     fn from_str(feature: &str) -> Result<Relations, Self::Err> {
-//         match feature {
-//             "INTERACTS" => Ok(Relations::INTERACTS),
-//             "COLIFE" => Ok(Relations::COLIFE),
-//             "COBIRTH" => Ok(Relations::COBIRTH),
-//             "CODEATH" => Ok(Relations::CODEATH),
-//             "DESCENDANTS" => Ok(Relations::DESCENDANTS),
-//             "INHERITANCE" => Ok(Relations::INHERITANCE),
-//             "CONSUMES" => Ok(Relations::CONSUMES),
-//             "SPLIT" => Ok(Relations::SPLIT),
-//             "MERGE" => Ok(Relations::MERGE),
-//             "MINION" => Ok(Relations::MINION),
-//             "PEELER" => Ok(Relations::PEELER),
-//             "ENGAGES" => Ok(Relations::ENGAGES),
-//             _ => Err(())
-//         }
-//     }
-// }
-
 
 impl Relations {
     fn relation_type(&self) -> u8 {
@@ -233,7 +212,7 @@ impl Relations {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EventAdd {
     SINGLE(usize),
     MULTI(IntSet<usize>)
@@ -251,6 +230,8 @@ pub struct Ocdg {
     pub net: DiGraph<usize, usize>,
     pub edge_attributes: IntMap<usize, NodeInfo>,
     pub node_attributes: IntMap<usize, NodeInfo>,
+    pub object_map: BiMap<String, usize>,
+    pub event_map: BiMap<String, usize>,
     pub inodes: IntMap<usize, NodeIndex>,
     pub iedges: IntMap<usize, IntMap<usize, EdgeIndex>>,
     pub irels: IntMap<usize, IntMap<usize,IntMap<usize, IntSet<usize>>>>
@@ -300,6 +281,7 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
         for oid in &data.omap {
             if !ocdg.node_attributes.contains_key(oid) {
                 let new_node = ocdg.net.add_node(*oid);
+                ocdg.object_map.insert(log.object_map.get_by_right(&oid).expect("This cannot occur").to_owned(), *oid);
                 ocdg.init_object_key(*oid);
                 ocdg.inodes.entry(*oid).or_insert(new_node);
                 let curr_obj = &log.objects[oid];
@@ -321,9 +303,27 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
 
     println!("oidloop took: {:?}", oidloop.elapsed());
     let edgeloop = Instant::now();
-    
+
+    let mut ev_added: AHashSet<usize> = AHashSet::new();
     for edge in new_edges {
+        match edge.2.clone() {
+            EventAdd::SINGLE(ev) => {
+                ev_added.insert(ev);
+            },
+            EventAdd::MULTI(evs) => {
+                for ev in evs {
+                    ev_added.insert(ev);
+                    
+                }
+            }
+        }
+
         ocdg.apply_new_edges((edge.0, edge.1), edge.2, edge.3);
+    }
+    
+    // add event mappings
+    for ev in ev_added {
+        ocdg.event_map.insert(log.event_map.get_by_right(&ev).expect("This cannot fail ever").to_owned(), ev);
     }
     println!("edgeloop took: {:?}", edgeloop.elapsed());
 

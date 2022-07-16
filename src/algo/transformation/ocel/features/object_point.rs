@@ -30,16 +30,35 @@ pub enum ObjectPoint {
     SubgraphExistenceCount
 }
 
-impl ObjectPoint {
-    pub fn execute<T>(&self, log: &Ocel, ocdg: &Ocdg, oid: &usize, config: AHashMap<String, Value>) -> Option<T> 
-        where T: FromPrimitive + ToPrimitive + Clone + PartialOrd {
 
-            T::from_u8(1)
+pub enum ParamValue<'a> {
+    Value(Value),
+    Ocdg(&'a Ocdg),
+    Ocel(&'a Ocel)
+}
+
+
+impl ObjectPoint { // config holds ocel, ocdg, 
+    pub fn execute_single<T>(&self, oid: &usize, params: AHashMap<String, ParamValue>) -> Option<T> 
+        where T: FromPrimitive + ToPrimitive + Clone + PartialOrd {
+            match self {
+                ObjectPoint::UniqueNeighborCount => {
+                    if let Some(ocdg_param) = params.get(&"ocdg".to_string()) {
+                        if let ParamValue::Ocdg(ocdg) = ocdg_param {
+                            if ocdg.inodes.contains_key(oid) {
+                                return T::from_usize(unique_neighbor_count(ocdg, oid));
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+            None
     }
 }
 
-pub fn unique_neighbor_count(ocdg: &Ocdg, oid: usize) -> usize {
-    let curr_oid: NodeIndex = ocdg.inodes[&oid];
+pub fn unique_neighbor_count(ocdg: &Ocdg, oid: &usize) -> usize {
+    let curr_oid: NodeIndex = ocdg.inodes[oid];
     ocdg.net.neighbors_directed(curr_oid, Outgoing).into_iter()
                                                    .unique()
                                                    .count()
@@ -72,7 +91,7 @@ pub fn activity_value_operator(log: &Ocel, oid: usize, attr: String, op: Operato
                             .map(|oe| match &log.events[&oe].vmap[&attr] {
                                         Value::Number(v) => v.as_f64().unwrap(),
                                         _ => 0.0
-                                    }))
+                                    })).unwrap()
 
 }
 

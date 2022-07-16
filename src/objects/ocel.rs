@@ -2,6 +2,7 @@ pub mod importer;
 pub mod exporter;
 pub mod validator;
 
+use bimap::BiMap;
 use serde::{Serialize, Deserialize};
 use nohash_hasher::{IntMap, IntSet};
 use serde_json::Value;
@@ -52,6 +53,8 @@ pub struct Ocel {
     pub global_object: AHashMap<String, Value>,
     pub events: IntMap<usize, OcelEvent>,
     pub objects: IntMap<usize, OcelObject>,
+    pub object_map: BiMap<String, usize>,
+    pub event_map: BiMap<String, usize>,
     pub activities: AHashSet<String>
 }
 
