@@ -1,16 +1,18 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use ahash::{AHashSet, AHashMap};
 use chrono::Duration;
+use num_traits::{FromPrimitive, ToPrimitive};
 use petgraph::EdgeDirection::Outgoing;
 use itertools::Itertools;
 use petgraph::graph::NodeIndex;
 use serde_json::Value;
+use strum::EnumString;
 
 use crate::objects::ocel::Ocel;
 use crate::objects::ocdg::{Ocdg, Relations};
-// use super::operator::Operator;
+use super::operator::Operator;
 
+#[derive(EnumString)]
 pub enum ObjectPoint {
     UniqueNeighborCount,
     ActivityExistence,
@@ -28,39 +30,13 @@ pub enum ObjectPoint {
     SubgraphExistenceCount
 }
 
-
 impl ObjectPoint {
-    pub fn execute(&self, log: &Ocel, ocdg: &Ocdg, oid: &usize, config: AHashMap<String, Value>) {
+    pub fn execute<T>(&self, log: &Ocel, ocdg: &Ocdg, oid: &usize, config: AHashMap<String, Value>) -> Option<T> 
+        where T: FromPrimitive + ToPrimitive + Clone + PartialOrd {
 
+            T::from_u8(1)
     }
 }
-
-
-
-impl FromStr for ObjectPoint {
-    type Err = ();
-
-    fn from_str(feature: &str) -> Result<ObjectPoint, Self::Err> {
-        match feature {
-            "UniqueNeighborCount" => Ok(ObjectPoint::UniqueNeighborCount),
-            "ActivityExistence" => Ok(ObjectPoint::ActivityExistence),
-            "ActivityExistenceCount" => Ok(ObjectPoint::ActivityExistenceCount),
-            "ActivityValueOperator" => Ok(ObjectPoint::ActivityValueOperator),
-            "ObjectTypeRelationsValueOperator" => Ok(ObjectPoint::ObjectTypeRelationsValueOperator),
-            "ObjectLifetime" => Ok(ObjectPoint::ObjectLifetime),
-            "ObjectUnitSetRatio" => Ok(ObjectPoint::ObjectUnitSetRatio),
-            "ObjectEventInteractionOperator" => Ok(ObjectPoint::ObjectEventInteractionOperator),
-            "ObjectTypeInteraction" => Ok(ObjectPoint::ObjectTypeInteraction),
-            "ObjectEventsDirectlyFollows" => Ok(ObjectPoint::ObjectEventsDirectlyFollows),
-            "ObjectWaitTime" => Ok(ObjectPoint::ObjectWaitTime),
-            "ObjectStartEnd" => Ok(ObjectPoint::ObjectStartEnd),
-            "DirectRelationCount" => Ok(ObjectPoint::DirectRelationCount),
-            "SubgraphExistenceCount" => Ok(ObjectPoint::SubgraphExistenceCount),
-            _ => Err(()),
-        }
-    }
-}
-
 
 pub fn unique_neighbor_count(ocdg: &Ocdg, oid: usize) -> usize {
     let curr_oid: NodeIndex = ocdg.inodes[&oid];
@@ -90,14 +66,13 @@ pub fn activity_existence_count(log: &Ocel, oid: usize) -> Vec<usize> {
               .collect_vec()
 }
 
-pub fn activity_value_operator(log: &Ocel, oid: usize, attr: String) -> f64 {
-    log.objects[&oid].events.iter()
+pub fn activity_value_operator(log: &Ocel, oid: usize, attr: String, op: Operator) -> f64 {
+    op.execute(log.objects[&oid].events.iter()
                             .filter(|oe| !log.events[&oe].vmap.contains_key(&attr))
                             .map(|oe| match &log.events[&oe].vmap[&attr] {
                                         Value::Number(v) => v.as_f64().unwrap(),
                                         _ => 0.0
-                                    })
-                            .sum::<f64>() //change for operator
+                                    }))
 
 }
 
