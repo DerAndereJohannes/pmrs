@@ -55,7 +55,7 @@ pub struct Ocel {
     pub objects: IntMap<usize, OcelObject>,
     pub object_map: BiMap<String, usize>,
     pub event_map: BiMap<String, usize>,
-    pub activities: AHashSet<String>
+    pub activities: Vec<String>
 }
 
 

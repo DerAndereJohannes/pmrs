@@ -10,8 +10,8 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
     let mut s = String::new();
     File::open(file_path)?.read_to_string(&mut s)?;
     let log: OcelSerde = serde_json::from_str(&s)?;
-    let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default(), object_map: BiMap::new(), event_map: BiMap::new(), activities: AHashSet::new() };
-
+    let mut log_internal: Ocel = Ocel { global_log: log.global_log, global_event: log.global_event, global_object: log.global_object, events: IntMap::default() , objects: IntMap::default(), object_map: BiMap::new(), event_map: BiMap::new(), activities: vec![] };
+    let mut activity_set: AHashSet<String> = AHashSet::new();
     
     let mut oid_nh: usize = usize::MIN; 
     for (oid, data) in log.objects {
@@ -22,7 +22,7 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
 
     let mut eid_nh: usize = usize::MIN;
     for (eid, data) in log.events {
-        log_internal.activities.insert(data.activity.clone());
+        activity_set.insert(data.activity.clone());
         let mut fast_event = OcelEvent {activity: data.activity, timestamp: data.timestamp, vmap: data.vmap, omap: IntSet::default()};
         log_internal.event_map.insert(eid, eid_nh);
 
@@ -35,6 +35,8 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
         log_internal.events.insert(eid_nh, fast_event);
         eid_nh = eid_nh + 1;
     }
+
+    log_internal.activities.extend(activity_set);
     
     Ok(log_internal)
 }

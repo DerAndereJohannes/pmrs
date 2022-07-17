@@ -33,3 +33,4 @@ num-traits = "0.2"
 lazysort = "0.2.1"
 clap = {version = "3.2", features = ["yaml"]}
 bimap = "0.6"
+polars = {version = "0.22", features = ["dtype-u8"] }

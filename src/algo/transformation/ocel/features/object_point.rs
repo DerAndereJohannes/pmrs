@@ -1,18 +1,20 @@
 use std::collections::HashMap;
 use ahash::{AHashSet, AHashMap};
 use chrono::Duration;
-use num_traits::{FromPrimitive, ToPrimitive};
 use petgraph::EdgeDirection::Outgoing;
 use itertools::Itertools;
 use petgraph::graph::NodeIndex;
+use polars::prelude::{Series, NamedFromOwned, DataFrame};
 use serde_json::Value;
-use strum::EnumString;
+use strum::{EnumString, Display, IntoStaticStr};
+use rayon::prelude::*;
 
+use crate::objects::linker::link_objects;
 use crate::objects::ocel::Ocel;
 use crate::objects::ocdg::{Ocdg, Relations};
 use super::operator::Operator;
 
-#[derive(EnumString)]
+#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq)]
 pub enum ObjectPoint {
     UniqueNeighborCount,
     ActivityExistence,
@@ -31,30 +33,110 @@ pub enum ObjectPoint {
 }
 
 
-pub enum ParamValue<'a> {
-    Value(Value),
-    Ocdg(&'a Ocdg),
-    Ocel(&'a Ocel)
+pub struct ObjectPointConfig<'a> {
+    pub ocel: &'a Ocel,
+    pub ocdg: &'a Ocdg,
+    pub params: &'a HashMap<ObjectPoint, Option<Value>>
+
 }
 
+pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
+    let object_linker = link_objects(&config.ocel.object_map, &config.ocdg.object_map);
+    let entity_order: Vec<usize> = object_linker.left_values().map(|v| **v).collect();
+    let mut string_oids: Series = entity_order.iter().map(|oid| config.ocel.object_map.get_by_right(oid).unwrap().to_owned()).collect();
+    string_oids.rename("oids");
+    let mut series_vec: Vec<Series> = vec![string_oids];
 
-impl ObjectPoint { // config holds ocel, ocdg, 
-    pub fn execute_single<T>(&self, oid: &usize, params: AHashMap<String, ParamValue>) -> Option<T> 
-        where T: FromPrimitive + ToPrimitive + Clone + PartialOrd {
-            match self {
-                ObjectPoint::UniqueNeighborCount => {
-                    if let Some(ocdg_param) = params.get(&"ocdg".to_string()) {
-                        if let ParamValue::Ocdg(ocdg) = ocdg_param {
-                            if ocdg.inodes.contains_key(oid) {
-                                return T::from_usize(unique_neighbor_count(ocdg, oid));
-                            }
-                        }
-                    }
-                }
-                _ => {}
+    for (feature, _params) in config.params {
+
+        match feature {
+            ObjectPoint::UniqueNeighborCount => {
+                let feature_values: Vec<(usize, usize)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                (index, unique_neighbor_count(config.ocdg, log_oid))
+                                                            })
+                                                            .collect();
+                
+                let mut feature_vector: Vec<u32> = Vec::with_capacity(feature_values.len());
+                feature_values.iter().for_each(|(index, value)| feature_vector.insert(*index, (*value).try_into().unwrap()));
+                series_vec.push(Series::from_vec(feature.into(), feature_vector));
+                
+            },
+            ObjectPoint::ActivityExistence => {
+                let feature_values: Vec<(usize, usize, u8)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                activity_existence(config.ocel, *log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, u8)>>()
+                                                            })
+                                                            .flatten()
+                                                            .collect();
+
+                let mut feature_vector: Vec<Vec<u8>> = vec![Vec::with_capacity(entity_order.len()); config.ocel.activities.len()];
+                feature_values.iter().for_each(|(oid, act_id, value)| feature_vector.get_mut(*act_id).expect("This can't fail").insert(*oid, *value));
+
+                config.ocel.activities.iter().enumerate().for_each(|(index, act_name)| {
+                                                                        series_vec.push(Series::from_vec(format!("{}:{}", feature, act_name).as_str(), feature_vector[index].clone()));
+                                                                    });
+
+            },
+            ObjectPoint::ActivityExistenceCount => {
+                let feature_values: Vec<(usize, usize, usize)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                activity_existence_count(config.ocel, *log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, usize)>>()
+                                                            })
+                                                            .flatten()
+                                                            .collect();
+
+                let mut feature_vector: Vec<Vec<u32>> = vec![Vec::with_capacity(entity_order.len()); config.ocel.activities.len()];
+                feature_values.iter().for_each(|(oid, act_id, value)| feature_vector.get_mut(*act_id).expect("This can't fail").insert(*oid, (*value).try_into().unwrap()));
+
+                config.ocel.activities.iter().enumerate().for_each(|(index, act_name)| {
+                                                                        series_vec.push(Series::from_vec(format!("{}:{}", feature, act_name).as_str(), feature_vector[index].clone()))
+                                                                    });
+
+            },
+            ObjectPoint::ObjectLifetime => {
+                let feature_values: Vec<(usize, Duration)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                (index, object_lifetime(config.ocel, log_oid))
+                                                            })
+                                                            .collect();
+
+                let mut feature_vector: Vec<i64> = Vec::with_capacity(feature_values.len());
+                feature_values.iter().for_each(|(index, value)| feature_vector.insert(*index, match value.num_nanoseconds() {Some(v) => {v}, None => {0}}));
+                series_vec.push(Series::from_vec(feature.into(), feature_vector));
+            },
+            ObjectPoint::ObjectUnitSetRatio => {
+                let feature_values: Vec<(usize, f64)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                (index, object_unit_set_ratio(config.ocel, log_oid))
+                                                            })
+                                                            .collect();
+
+                let mut feature_vector: Vec<f64> = Vec::with_capacity(feature_values.len());
+                feature_values.iter().for_each(|(index, value)| feature_vector.insert(*index, *value));
+                series_vec.push(Series::from_vec(feature.into(), feature_vector));
+            },
+            ObjectPoint::ObjectEventInteractionOperator => {
+                let feature_values: Vec<(usize, f64)> = entity_order.par_iter()
+                                                            .enumerate()
+                                                            .map(|(index, log_oid)| {
+                                                                (index, object_average_event_interaction(config.ocel, log_oid))
+                                                            })
+                                                            .collect();
+
+                let mut feature_vector: Vec<f64> = Vec::with_capacity(feature_values.len());
+                feature_values.iter().for_each(|(index, value)| feature_vector.insert(*index, *value));
+                series_vec.push(Series::from_vec(feature.into(), feature_vector));
             }
-            None
+            _ => {}
+        }
     }
+    DataFrame::new(series_vec).unwrap()
 }
 
 pub fn unique_neighbor_count(ocdg: &Ocdg, oid: &usize) -> usize {
@@ -125,7 +207,7 @@ pub fn object_unit_set_ratio(log: &Ocel, oid: &usize) -> f64 {
                               1
                           }).fold(0, |accum, item| accum + item);
 
-        return (unitset / node.events.len()) as f64
+        return unitset as f64 / node.events.len() as f64
     }
     0.0
 }
@@ -140,7 +222,7 @@ pub fn object_average_event_interaction(log: &Ocel, oid: &usize) -> f64 {
                                         0})
                                      .fold(0, |accum, item| accum + item);
 
-        return (interaction / node.events.len()) as f64
+        return interaction as f64 / node.events.len() as f64
 
     }
     0.0
