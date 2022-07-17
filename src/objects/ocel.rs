@@ -61,7 +61,6 @@ pub struct Ocel {
 
 #[derive(Debug)]
 pub struct OcelObject{
-    pub oid: String,
     pub obj_type: String,
     pub ovmap: AHashMap<String, Value>,
     pub events: Vec<usize>
@@ -69,7 +68,6 @@ pub struct OcelObject{
 
 #[derive(Debug, Eq)]
 pub struct OcelEvent {
-    pub eid: String,
     pub activity: String,
     pub timestamp: DateTime<Utc>,
     pub vmap: AHashMap<String, Value>,

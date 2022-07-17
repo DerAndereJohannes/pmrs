@@ -30,17 +30,17 @@ pub(crate) fn export_gexf_ocdg_string(g: &Ocdg, log: &Ocel, file_path: &str) -> 
     for (oid, data) in &g.node_attributes {
         let mut attrvalues: Vec<AttValueGexf> = vec![];
         attrvalues.push(AttValueGexf { attr: 0.to_string(), value: data.node_type.to_owned() });
-        let oe_s: Vec<String> = log.objects.get(oid).unwrap().events.iter().map(|e_number| log.events.get(e_number).unwrap().eid.clone()).collect();
+        let oe_s: Vec<String> = log.objects.get(oid).unwrap().events.iter().map(|e_number| log.event_map.get_by_right(e_number).expect("This can't fail").to_owned()).collect();
         attrvalues.push(AttValueGexf { attr: 1.to_string(), value: format!("{:?}", oe_s) });
 
-        gexf_repr.graph.nodes.nodes.push(NodeGexf {id: oid.to_string(), label: log.objects.get(oid).unwrap().oid.clone(), attvalues: AttValuesGexf {attvalues: attrvalues}});
+        gexf_repr.graph.nodes.nodes.push(NodeGexf {id: oid.to_string(), label: log.object_map.get_by_right(oid).expect("This can't fail").to_owned(), attvalues: AttValuesGexf {attvalues: attrvalues}});
     }
 
     for (src, edge_data) in &g.irels {
         for (tar, rels) in edge_data {
             let mut attrvalues: Vec<AttValueGexf> = vec![];
             for (r, events) in rels {
-                let ev_s: Vec<String> = events.iter().map(|eid| log.events.get(eid).unwrap().eid.clone()).collect();
+                let ev_s: Vec<String> = events.iter().map(|eid| log.event_map.get_by_right(eid).expect("This can't fail").to_owned()).collect();
                 attrvalues.push(AttValueGexf { attr: r.to_string(), value: format!("{:?}", ev_s) });
             }
 
@@ -86,14 +86,15 @@ pub(crate) fn export_gexf_ocdg(g: &Ocdg, file_path: &str) -> Result<bool, Box<dy
         let mut attrvalues: Vec<AttValueGexf> = vec![];
         attrvalues.push(AttValueGexf { attr: 0.to_string(), value: data.node_type.to_owned() });
 
-        gexf_repr.graph.nodes.nodes.push(NodeGexf {id: oid.to_string(), label: oid.to_string(), attvalues: AttValuesGexf {attvalues: attrvalues}});
+        gexf_repr.graph.nodes.nodes.push(NodeGexf {id: oid.to_string(), label: g.object_map.get_by_right(oid).expect("This can't fail").to_owned(), attvalues: AttValuesGexf {attvalues: attrvalues}});
     }
 
     for (src, edge_data) in &g.irels {
         for (tar, rels) in edge_data {
             let mut attrvalues: Vec<AttValueGexf> = vec![];
             for (r, events) in rels {
-                attrvalues.push(AttValueGexf { attr: r.to_string(), value: format!("{:?}", events) });
+                let ev_s: Vec<String> = events.iter().map(|eid| g.event_map.get_by_right(eid).expect("This can't fail").to_owned()).collect();
+                attrvalues.push(AttValueGexf { attr: r.to_string(), value: format!("{:?}", ev_s) });
             }
 
             gexf_repr.graph.edges.edges.push(EdgeGexf { source: src.to_string(), target: tar.to_string(), attvalues: AttValuesGexf { attvalues: attrvalues } });

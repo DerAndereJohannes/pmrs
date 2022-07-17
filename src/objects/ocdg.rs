@@ -221,7 +221,6 @@ pub enum EventAdd {
 
 #[derive(Debug, Default)]
 pub struct NodeInfo {
-    pub oid: String,
     pub node_type: String,
 }
 

@@ -15,15 +15,15 @@ pub(crate) fn import_json_ocel(file_path: &str) -> Result<Ocel, Box<dyn Error>> 
     
     let mut oid_nh: usize = usize::MIN; 
     for (oid, data) in log.objects {
-        log_internal.object_map.insert(oid.to_owned(), oid_nh);
-        log_internal.objects.insert(oid_nh, OcelObject {oid, obj_type: data.obj_type, ovmap: data.ovmap, events: vec![] });
+        log_internal.object_map.insert(oid, oid_nh);
+        log_internal.objects.insert(oid_nh, OcelObject {obj_type: data.obj_type, ovmap: data.ovmap, events: vec![] });
         oid_nh = oid_nh + 1;
     }
 
     let mut eid_nh: usize = usize::MIN;
     for (eid, data) in log.events {
         log_internal.activities.insert(data.activity.clone());
-        let mut fast_event = OcelEvent {eid: eid.to_owned(), activity: data.activity, timestamp: data.timestamp, vmap: data.vmap, omap: IntSet::default()};
+        let mut fast_event = OcelEvent {activity: data.activity, timestamp: data.timestamp, vmap: data.vmap, omap: IntSet::default()};
         log_internal.event_map.insert(eid, eid_nh);
 
         for oid in data.omap.iter() {
