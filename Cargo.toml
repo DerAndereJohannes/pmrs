@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 homepage = "https://github.com/DerAndereJohannes/pmrs"
-description = "Rust support to the process mining functions. Includes a library and a small cli-interface."
+description = "Rust support to process mining functions. Includes a library and a small cli-interface."
 repository = "https://github.com/DerAndereJohannes/pmrs"
 documentation = "https://github.com/DerAndereJohannes/pmrs"
 keywords = ["process-mining", "data-mining", "data-science", "machine-learning", "performance"]
