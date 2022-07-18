@@ -1,4 +1,3 @@
-use ahash::AHashMap;
 use pmrs::objects::linker::link_objects;
 use pmrs::objects::ocdg::exporter::export_ocdg;
 use pmrs::objects::ocdg::{Ocdg, generate_ocdg, Relations};
@@ -8,6 +7,7 @@ use pmrs::objects::ocel::exporter::export_ocel_pretty;
 use pmrs::objects::ocdg::importer::import_ocdg;
 use pmrs::algo::transformation::ocel::features::object_point::{ObjectPoint, ObjectPointConfig, object_point_features};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::time::Instant;
 use petgraph::dot::Dot;
 
@@ -47,7 +47,7 @@ fn test_ocdg_generation(){
                                          Relations::MERGE];
 
     let ocdg: Ocdg = generate_ocdg(&log, &relations);
-    let params: AHashMap<ObjectPoint, Option<Value>> = AHashMap::from_iter([(ObjectPoint::ObjectLifetime, None), (ObjectPoint::ObjectEventInteractionOperator, None), (ObjectPoint::ObjectUnitSetRatio, None)]);
+    let params: HashMap<ObjectPoint, Option<Value>> = HashMap::from_iter([(ObjectPoint::ObjectLifetime, None), (ObjectPoint::ObjectEventInteractionOperator, None), (ObjectPoint::ObjectUnitSetRatio, None)]);
 
     let feature_config = ObjectPointConfig { ocel: &log, ocdg: &ocdg, params: &params};
     let feature_extraction = object_point_features(feature_config);

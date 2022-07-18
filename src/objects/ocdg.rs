@@ -12,7 +12,6 @@ use array_tool::vec::Intersect;
 use rayon::prelude::*;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use strum::{EnumIter, EnumString};
-use std::time::Instant;
 
 use super::ocel::Ocel;
 
@@ -275,7 +274,6 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     let rel_whole: Vec<_> = relations.iter().filter(|r| r.relation_type() == 1).collect();
     let mut neighbours: IntMap<usize, IntSet<usize>> = IntMap::default();
 
-    let eidloop = Instant::now();
     for (eid, data) in &log.events {
         for oid in &data.omap {
             if !ocdg.node_attributes.contains_key(oid) {
@@ -292,16 +290,10 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
 
     }
 
-    println!("eidloop took: {:?}", eidloop.elapsed());
-    
-    let oidloop = Instant::now();
     let new_edges: Vec<(usize, usize, EventAdd, Relations)> = ocdg.inodes.par_iter()
                            .map(|(oid, _)| whole_instance_edges(&log, &ocdg, oid, &neighbours, &rel_whole, &rel_inst))
                            .flatten()
                            .collect();
-
-    println!("oidloop took: {:?}", oidloop.elapsed());
-    let edgeloop = Instant::now();
 
     let mut ev_added: AHashSet<usize> = AHashSet::new();
     for edge in new_edges {
@@ -324,8 +316,6 @@ pub fn generate_ocdg(log: &Ocel, relations: &Vec<Relations>) -> Ocdg {
     for ev in ev_added {
         ocdg.event_map.insert(log.event_map.get_by_right(&ev).expect("This cannot fail ever").to_owned(), ev);
     }
-    println!("edgeloop took: {:?}", edgeloop.elapsed());
-
     ocdg
 }
 

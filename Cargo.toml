@@ -4,11 +4,14 @@ version = "0.0.1"
 edition = "2021"
 
 homepage = "https://github.com/DerAndereJohannes/pmrs"
-description = "Rust support to the Object-Centric Event Logs (OCEL) standard in process mining. Includes a library and a small cli-interface."
+description = "Rust support to the process mining functions. Includes a library and a small cli-interface."
 repository = "https://github.com/DerAndereJohannes/pmrs"
+documentation = "https://github.com/DerAndereJohannes/pmrs"
 keywords = ["process-mining", "data-mining", "data-science", "machine-learning", "performance"]
 categories = ["data-structures", "concurrency", "command-line-utilities", "science"]
-license = "GNU General Public License v3.0"
+license = "LGPL-3.0-only"
+readme = "README.md"
+authors = ["Johannes Herforth"]
 
 
 [dependencies]
