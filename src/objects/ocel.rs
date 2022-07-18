@@ -46,7 +46,7 @@ pub struct OcelEventSerde {
     pub vmap: AHashMap<String, Value>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ocel {
     pub global_log: AHashMap<String, Value>,
     pub global_event: AHashMap<String, Value>,
@@ -59,14 +59,14 @@ pub struct Ocel {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OcelObject{
     pub obj_type: String,
     pub ovmap: AHashMap<String, Value>,
     pub events: Vec<usize>
 }
 
-#[derive(Debug, Eq)]
+#[derive(Debug, Eq, Clone)]
 pub struct OcelEvent {
     pub activity: String,
     pub timestamp: DateTime<Utc>,
