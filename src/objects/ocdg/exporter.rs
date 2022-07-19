@@ -2,15 +2,13 @@ pub(crate) mod variants;
 
 use std::error::Error;
 
-use crate::objects::ocel::Ocel;
-
-use self::variants::gexf::{export_gexf_ocdg, export_gexf_ocdg_string};
+use self::variants::gexf::{export_gexf_ocdg, ocdg_to_xml};
 
 use super::Ocdg;
 
 
-pub fn export_ocdg_string(g: &Ocdg, log: &Ocel, file_path: &str) -> Result<bool, Box<dyn Error>> {
-    return export_gexf_ocdg_string(g, log, file_path);
+pub fn generate_ocdg_string(g: &Ocdg) -> Result<String, Box<dyn Error>> {
+    return ocdg_to_xml(g);
 }
 
 pub fn export_ocdg(g: &Ocdg, file_path: &str) -> Result<bool, Box<dyn Error>> {

@@ -29,7 +29,7 @@ pub(crate) fn export_json_ocel_pretty(log: &Ocel, file_path: &str) -> Result<boo
 }
 
 
-pub(self) fn generate_ocel_serde(log: &Ocel) -> OcelSerde {
+pub(crate) fn generate_ocel_serde(log: &Ocel) -> OcelSerde {
     let hasher = RandomState::new();
     let mut log_serde: OcelSerde = OcelSerde { global_log: log.global_log.to_owned(), global_event: log.global_event.to_owned(), global_object: log.global_object.to_owned(), objects: AHashMap::new(), events: IndexMap::with_hasher(hasher) };
 
