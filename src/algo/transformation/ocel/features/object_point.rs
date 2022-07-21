@@ -340,7 +340,7 @@ pub fn object_direct_rel_count(ocdg: &Ocdg, oid: &usize, rel: &Relations) -> usi
         return neighs.enumerate().map(|(_i, neigh)| {
             let neigh_id = &ocdg.net[neigh];
             let conn = ocdg.irels.get(oid).unwrap().get(neigh_id).unwrap();
-            if conn.contains_key(&(rel.relation_index() as usize)) {
+            if conn.contains_key(&(rel.relation_index())) {
                 1
             } else {
                 0
