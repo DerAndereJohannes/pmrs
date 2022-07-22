@@ -28,8 +28,8 @@ pub struct EventGroupConfig<'a> {
 
 pub fn activity_counts(log: &Ocel) -> HashMap<String, usize> {
     let mut activity_counter: HashMap<String, usize> = HashMap::new();
-    log.events.iter().for_each(|(eid, values)| {
-                                    *activity_counter.entry(values.activity).or_insert(0) += 1;
+    log.events.iter().for_each(|(_eid, values)| {
+                                    *activity_counter.entry(values.activity.clone()).or_insert(0) += 1;
                                 });
 
     activity_counter
@@ -37,8 +37,8 @@ pub fn activity_counts(log: &Ocel) -> HashMap<String, usize> {
 
 pub fn activity_attr_operator(log: &Ocel, activity: &str, op: Operator) -> HashMap<String, f64> {
     let mut activity_attrs: HashMap<String, Vec<f64>> = HashMap::new();
-    log.events.iter().filter(|(eid, values)| values.activity == activity)
-                     .for_each(|(eid, values)| {
+    log.events.iter().filter(|(_eid, values)| values.activity == activity)
+                     .for_each(|(_eid, values)| {
                          values.vmap.iter().for_each(|(attr, val)| {
                              if let Some(valid) = val.as_f64() {
                                 activity_attrs.entry(attr.to_owned()).or_default().push(valid);
@@ -55,18 +55,18 @@ pub fn activity_attr_operator(log: &Ocel, activity: &str, op: Operator) -> HashM
     attr_operated
 }
 
-pub fn activity_otype_operator(log: &Ocel, otype: &str, op: Operator) -> HashMap<String, HashMap<String, f64>> {
+pub fn activity_otype_operator(log: &Ocel, op: Operator) -> HashMap<String, HashMap<String, f64>> {
     let mut activity_otype_vecmap: HashMap<String, HashMap<String, Vec<f64>>> = HashMap::new();
-    log.events.iter().for_each(|(eid, values)| {
+    log.events.iter().for_each(|(_eid, values)| {
         let mut omap_counts: HashMap<String, usize> = HashMap::new();
         values.omap.iter().for_each(|oid| {
             match log.objects.get(oid) {
-                Some(obj) => {*omap_counts.entry(obj.obj_type).or_insert(0) += 1},
+                Some(obj) => {*omap_counts.entry(obj.obj_type.clone()).or_insert(0) += 1},
                 None => {*omap_counts.entry("unknown".to_string()).or_insert(0) += 1}
             }
         });
         for (ot, amount) in omap_counts {
-            activity_otype_vecmap.entry(values.activity).or_default().entry(ot).or_default().push(amount as f64);
+            activity_otype_vecmap.entry(values.activity.clone()).or_default().entry(ot).or_default().push(amount as f64);
         }
 
     });
@@ -83,7 +83,7 @@ pub fn activity_otype_operator(log: &Ocel, otype: &str, op: Operator) -> HashMap
 
 pub fn activity_active_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
     op.execute(log.events.iter()
-              .filter(|(eid, values)| values.activity == act)
+              .filter(|(_eid, values)| values.activity == act)
               .map(|(eid, values)| {
                   values.omap.iter()
                              .filter(|oid| log.objects.contains_key(*oid))
@@ -100,7 +100,7 @@ pub fn activity_active_time_operator(log: &Ocel, act: &str, op: Operator) -> f64
 
 pub fn activity_wait_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
     op.execute(log.events.iter()
-              .filter(|(eid, values)| values.activity == act)
+              .filter(|(_eid, values)| values.activity == act)
               .map(|(eid, values)| {
                   values.omap.iter()
                              .filter(|oid| log.objects.contains_key(*oid))

@@ -30,7 +30,7 @@ pub fn relations_created_counts(log: &Ocel, ocdg: &Ocdg, eid: &usize) -> Vec<usi
               .for_each(|oid1| {
                   let relsrc = ocdg.irels.get(oid1).unwrap();
                   relsrc.iter().filter(|(oid2, _)| e.omap.contains(oid2))
-                               .for_each(|(oid2, rels)| {
+                               .for_each(|(_oid2, rels)| {
                                    for (rel, rel_events) in rels {
                                        if rel_events.contains(eid) {
                                            relation_counts[*rel as usize] += 1; 
@@ -47,7 +47,7 @@ pub fn omap_type_counts(log:&Ocel, eid: &usize) -> HashMap<String, usize> {
     if let Some(e) = log.events.get(eid) {
         e.omap.iter().for_each(|oid| {
             match log.objects.get(oid) {
-                Some(obj) => {*omap_counts.entry(obj.obj_type).or_insert(0) += 1},
+                Some(obj) => {*omap_counts.entry(obj.obj_type.clone()).or_insert(0) += 1},
                 None => {*omap_counts.entry("unknown".to_string()).or_insert(0) += 1}
             }
         });
@@ -66,7 +66,7 @@ pub fn output_object_type_count(log:&Ocel, eid: &usize) -> HashMap<String, usize
                                 false
                             })
                      .for_each(|oid| {
-                         *otype_counts.entry(log.objects.get(oid).expect("cannot fail").obj_type).or_insert(0) += 1;
+                         *otype_counts.entry(log.objects.get(oid).expect("cannot fail").obj_type.clone()).or_insert(0) += 1;
                      });
     }
     otype_counts
@@ -83,7 +83,7 @@ pub fn input_object_type_count(log:&Ocel, eid: &usize) -> HashMap<String, usize>
                                 false
                             })
                      .for_each(|oid| {
-                         *otype_counts.entry(log.objects.get(oid).expect("cannot fail").obj_type).or_insert(0) += 1;
+                         *otype_counts.entry(log.objects.get(oid).expect("cannot fail").obj_type.clone()).or_insert(0) += 1;
                      });
     }
     otype_counts
@@ -93,7 +93,7 @@ pub fn input_object_type_count(log:&Ocel, eid: &usize) -> HashMap<String, usize>
 pub fn activity_ohe(log: &Ocel, eid: &usize) -> Vec<u8> {
     let mut activity_bools: Vec<u8> = vec![0; log.activities.len()];
     if let Some(e) = log.events.get(eid) {
-        if let Some(pos) = log.activities.iter().position(|&act| e.activity == act) {
+        if let Some(pos) = log.activities.iter().position(|act| e.activity.as_str() == act) {
             activity_bools[pos] = 1;
         }
     }

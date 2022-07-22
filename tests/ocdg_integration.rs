@@ -16,7 +16,8 @@ fn test_ocdg_generation(){
     // let import_time = Instant::now();
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
     let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min.jsonocel").unwrap();
-    // println!("{:?}", &log.objects);
+    println!("{:?}", &log.events);
+    println!("{:?}", &log.events.get(&38).unwrap().timestamp > &log.events.get(&37).unwrap().timestamp);
     // let ocdg: Ocdg = import_ocdg("../../Desktop/example-export.gexf").unwrap();
     // println!("{:?}", &ocdg);
 
@@ -32,35 +33,35 @@ fn test_ocdg_generation(){
     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
 
     // let relations: Vec<Relations> = vec![Relations::DESCENDANTS]; 
-    let relations: Vec<Relations> = vec![Relations::INTERACTS, 
-                                         Relations::DESCENDANTS,
-                                         Relations::COBIRTH,
-    // let relations: Vec<Relations> = vec![Relations::COBIRTH,
-                                         Relations::COLIFE,
-                                         Relations::CODEATH,
-                                         Relations::CONSUMES,
-                                         Relations::INHERITANCE,
-                                         Relations::PEELER,
-                                         Relations::ENGAGES,
-                                         Relations::MINION,
-                                         Relations::SPLIT,
-                                         Relations::MERGE];
+    // let relations: Vec<Relations> = vec![Relations::INTERACTS, 
+    //                                      Relations::DESCENDANTS,
+    //                                      Relations::COBIRTH,
+    // // let relations: Vec<Relations> = vec![Relations::COBIRTH,
+    //                                      Relations::COLIFE,
+    //                                      Relations::CODEATH,
+    //                                      Relations::CONSUMES,
+    //                                      Relations::INHERITANCE,
+    //                                      Relations::PEELER,
+    //                                      Relations::ENGAGES,
+    //                                      Relations::MINION,
+    //                                      Relations::SPLIT,
+    //                                      Relations::MERGE];
 
-    let ocdg: Ocdg = generate_ocdg(&log, &relations);
-    let params: HashMap<ObjectPoint, Option<Value>> = HashMap::from_iter([(ObjectPoint::ObjectLifetime, None), (ObjectPoint::ObjectEventInteractionOperator, None), (ObjectPoint::ObjectUnitSetRatio, None)]);
+    // let ocdg: Ocdg = generate_ocdg(&log, &relations);
+    // let params: HashMap<ObjectPoint, Option<Value>> = HashMap::from_iter([(ObjectPoint::ObjectLifetime, None), (ObjectPoint::ObjectEventInteractionOperator, None), (ObjectPoint::ObjectUnitSetRatio, None)]);
 
-    let feature_config = ObjectPointConfig { ocel: &log, ocdg: &ocdg, params: &params};
-    let feature_extraction = object_point_features(feature_config);
-    println!("{:?}", feature_extraction);
+    // let feature_config = ObjectPointConfig { ocel: &log, ocdg: &ocdg, params: &params};
+    // let feature_extraction = object_point_features(feature_config);
+    // println!("{:?}", feature_extraction);
 
-    // let _success = export_ocdg(&ocdg, "../../Desktop/example-export.gexf");
+    // // let _success = export_ocdg(&ocdg, "../../Desktop/example-export.gexf");
 
-    // export_ocdg(&_net, &log, "../../Desktop/test.gexf").unwrap();
-    // println!("{:?}", ocdg.inodes);
-    // println!("{:?}", log.objects);
-    // println!("{:?}", ocdg.iedges);
-    // println!("{:?}", ocdg.irels);
-    // println!("{:?}", Dot::new(&ocdg.net));
+    // // export_ocdg(&_net, &log, "../../Desktop/test.gexf").unwrap();
+    // // println!("{:?}", ocdg.inodes);
+    // // println!("{:?}", log.objects);
+    // // println!("{:?}", ocdg.iedges);
+    // // println!("{:?}", ocdg.irels);
+    // // println!("{:?}", Dot::new(&ocdg.net));
 
     assert!(true)
 }

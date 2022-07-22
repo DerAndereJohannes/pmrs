@@ -40,36 +40,35 @@ pub fn object_type_attr_operator(log: &Ocel, otype: &str, attr: &str, op: Operat
 
 pub fn ot_ot_interactions(ocdg: &Ocdg, ot1: &str, ot2: &str, relation: &Relations) -> u64 {
    ocdg.inodes.iter()
-              .filter(|(oid, node)| ocdg.node_attributes.get(oid).unwrap().node_type == ot1 && ocdg.irels.contains_key(oid))
-              .map(|(oid, node)| ocdg.irels[oid].iter().filter(|(oid2, rel)| ocdg.node_attributes.get(oid2).unwrap().node_type == ot2 && rel.contains_key(&relation.relation_index())).count() as u64)
+              .filter(|(oid, _node)| ocdg.node_attributes.get(oid).unwrap().node_type == ot1 && ocdg.irels.contains_key(oid))
+              .map(|(oid, _node)| ocdg.irels[oid].iter().filter(|(oid2, rel)| ocdg.node_attributes.get(oid2).unwrap().node_type == ot2 && rel.contains_key(&relation.relation_index())).count() as u64)
               .sum() 
 }
 
 pub fn root_node_count(ocdg: &Ocdg, otype: &str) -> usize {
     ocdg.inodes.iter()
-               .filter(|(oid, node)| ocdg.node_attributes.get(oid).unwrap().node_type == otype)
-               .filter(|(oid, node)| ocdg.net.neighbors_directed(**node, Incoming).count() == 0)
+               .filter(|(oid, _node)| ocdg.node_attributes.get(oid).unwrap().node_type == otype)
+               .filter(|(_oid, node)| ocdg.net.neighbors_directed(**node, Incoming).count() == 0)
                .count()
 }
 
 pub fn leaf_node_count(ocdg: &Ocdg, otype: &str) -> usize {
     ocdg.inodes.iter()
-               .filter(|(oid, node)| ocdg.node_attributes.get(oid).unwrap().node_type == otype)
-               .filter(|(oid, node)| ocdg.net.neighbors_directed(**node, Outgoing).count() == 0)
+               .filter(|(oid, _node)| ocdg.node_attributes.get(oid).unwrap().node_type == otype)
+               .filter(|(_oid, node)| ocdg.net.neighbors_directed(**node, Outgoing).count() == 0)
                .count()
 }
 
 pub fn separation_complexity_operator(ocdg: &Ocdg, op: Operator) -> f64 {
-    let mut curr_nodes: AHashSet<&NodeIndex> = AHashSet::from_iter(ocdg.inodes.iter()
-                                                                              .filter(|(oid, node)| ocdg.net.neighbors_directed(**node, Incoming).count() == 0)
-                                                                              .map(|(oid, node)| node));
+    let mut curr_nodes: AHashSet<NodeIndex> = AHashSet::from_iter(ocdg.inodes.iter()
+                                                                              .filter(|(_oid, node)| ocdg.net.neighbors_directed(**node, Incoming).count() == 0)
+                                                                              .map(|(_oid, node)| node.to_owned()));
     let mut complexity_vec: Vec<usize> = vec![curr_nodes.len()];
 
     while curr_nodes.len() != 0 {
-        let mut new_nodes: AHashSet<&NodeIndex> = AHashSet::from_iter(curr_nodes.iter()
-                                                                                .map(|node| ocdg.net.neighbors_directed(**node, Outgoing).into_iter()
-                                                                                                                                         .map(|node2| &node2)
-                                                                                                                                         .collect::<Vec<&NodeIndex>>())
+        let new_nodes: AHashSet<NodeIndex> = AHashSet::from_iter(curr_nodes.iter()
+                                                                                .map(|node| ocdg.net.neighbors_directed(*node, Outgoing).into_iter()
+                                                                                                                                         .collect::<Vec<NodeIndex>>())
                                                                                 .flatten());
         
         complexity_vec.push(new_nodes.len());
