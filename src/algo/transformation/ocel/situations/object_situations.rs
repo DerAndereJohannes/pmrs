@@ -19,7 +19,6 @@ pub enum ObjectSituations {
 
 
 impl ObjectSituations {
-
     pub fn execute(&self, log: &Ocel, params: &ObjectSituationParameters, oid: usize) -> Option<Value> {
         let obj = &log.objects[&oid];
         match self {
@@ -44,7 +43,7 @@ impl ObjectSituations {
                     let oe_activities: HashSet<&str> = HashSet::from_iter(obj.events.iter().map(|eid| log.events[eid].activity.as_str()));
                     let mut remaining: Vec<&str> = vec![];
                     for ac in activities {
-                        if oe_activities.contains(ac) {
+                        if !oe_activities.contains(ac) {
                             remaining.push(ac);
                         }
                     }
@@ -82,6 +81,13 @@ pub struct ObjectSituationConfig<'a> {
     pub params: &'a HashMap<ObjectSituations, ObjectSituationParameters<'a>>
 }
 
+pub fn collect_object_targets(log: &Ocel, situation: ObjectSituations, params: ObjectSituationParameters) -> Vec<(usize, Value)> {
+    log.objects.keys()
+              .map(|oid| (*oid, situation.execute(&log, &params, *oid)))
+              .filter(|(_, val)| val.is_some())
+              .map(|(oid, val)| (oid, val.unwrap()))
+              .collect()
+}
 
 #[cfg(test)]
 mod tests {
@@ -129,11 +135,11 @@ mod tests {
         let oid = log.object_map.get_by_left(&"o1".to_string()).unwrap().to_owned();
         let situation = ObjectSituations::ObjectMissingActivity;
         let mut params_good = ObjectSituationParameters::default();
-        params_good.activities = Some(HashSet::from(["A"]));
+        params_good.activities = Some(HashSet::from(["B"]));
         let mut params_bad = ObjectSituationParameters::default();
-        params_bad.activities = Some(HashSet::from(["B"]));
+        params_bad.activities = Some(HashSet::from(["A"]));
 
-        assert_eq!(situation.execute(&log, &params_good, oid).unwrap(), json!(vec!["A"]));
+        assert_eq!(situation.execute(&log, &params_good, oid).unwrap(), json!(vec!["B"]));
         assert_eq!(situation.execute(&log, &params_bad, oid), None);
     } 
 
@@ -149,6 +155,17 @@ mod tests {
         assert_eq!(situation.execute(&log, &params, oid_good).unwrap(), json!(3600000));
         assert_eq!(situation.execute(&log, &params, oid_bad), None);
     } 
+    
+    #[test]
+    fn test_collect_object_targets() {
+        let log = get_test_data();
+        let oid = log.object_map.get_by_left(&"o1".to_string()).unwrap().to_owned();
+        let mut params = ObjectSituationParameters::default();
+        params.activities = Some(HashSet::from(["B"]));
+        let situation = ObjectSituations::ObjectMissingActivity;
 
-
+        let test_execution = collect_object_targets(&log, situation, params);
+        assert_eq!(test_execution.len(), 1);
+        assert_eq!(test_execution.first().unwrap().to_owned(), (oid, json!(["B"])));
+    }
 }

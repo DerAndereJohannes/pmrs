@@ -258,8 +258,8 @@ mod tests {
         let situation = EventSituations::EventChoice;
 
         let test_execution = collect_event_targets(&log, situation, params);
-        assert!(test_execution.len() == 1);
-        assert!(test_execution.first().unwrap().to_owned() == (0, json!("A")));
+        assert_eq!(test_execution.len(), 1);
+        assert_eq!(test_execution.first().unwrap().to_owned(), (0, json!("A")));
     }
 
 }
