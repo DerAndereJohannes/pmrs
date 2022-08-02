@@ -1257,6 +1257,7 @@ dependencies = [
  "indexmap",
  "itertools",
  "jsonschema",
+ "lazy_static",
  "lazysort",
  "nohash-hasher",
  "num-traits",
