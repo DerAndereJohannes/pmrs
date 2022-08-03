@@ -449,7 +449,8 @@ mod tests {
         assert_eq!(oid_df["send invoice"]["receive payment"], 1);
         assert_eq!(oid_df["check availability"]["check availability"], 1);
         assert_eq!(oid_df["check availability"]["pick item"], 1);
-
+        
+        // check if double works
         let oid = OCEL.object_map.get_by_left("o1").expect("cannot fail");
         let oid_df = object_events_directly_follows(&OCEL, oid);
         assert_eq!(oid_df["check availability"]["pick item"], 2);
