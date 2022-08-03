@@ -47,7 +47,8 @@
         "o1"
       ],
       "ocel:vmap": {
-        "time-taken": 3
+        "time-taken": 3,
+	"effort": 2
       }
     },
     "e3": {
@@ -134,7 +135,8 @@
         "o1"
       ],
       "ocel:vmap": {
-        "time-taken": 5
+        "time-taken": 5,
+	"effort": 6
       }
     },
     "e12": {

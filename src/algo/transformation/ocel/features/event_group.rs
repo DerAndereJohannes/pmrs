@@ -89,9 +89,12 @@ pub fn activity_active_time_operator(log: &Ocel, act: &str, op: Operator) -> f64
                              .filter(|oid| log.objects.contains_key(*oid))
                              .map(|oid| {
                                  let pos = log.objects.get(oid).expect("cannot fail").events.iter().position(|v| v == eid).unwrap();
-                                 match log.objects.get(oid).expect("cannot fail").events.get(pos+1) {
-                                     Some(eid2) => {(log.events[&eid2].timestamp - log.events[&eid].timestamp).num_milliseconds()},
-                                     None => {Duration::zero().num_milliseconds()}
+                                 let last_pos = log.objects.get(oid).expect("cannot fail").events.len() - 1;
+                                 if pos != last_pos {
+                                     let eid2 = log.objects.get(oid).expect("cannot fail").events.get(pos+1).expect("cannot fail");
+                                     (log.events[&eid2].timestamp - log.events[&eid].timestamp).num_milliseconds()
+                                 } else {
+                                     Duration::max_value().num_milliseconds()
                                  }
                              }).max().unwrap() as f64
               })).unwrap()
@@ -106,12 +109,67 @@ pub fn activity_wait_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
                              .filter(|oid| log.objects.contains_key(*oid))
                              .map(|oid| {
                                  let pos = log.objects.get(oid).expect("cannot fail").events.iter().position(|v| v == eid).unwrap();
-                                 match log.objects.get(oid).expect("cannot fail").events.get(pos-1) {
-                                     Some(eid2) => {(log.events[&eid].timestamp - log.events[&eid2].timestamp).num_milliseconds()},
-                                     None => {Duration::max_value().num_milliseconds()}
+                                 if pos != 0 {
+                                     let eid2 = log.objects.get(oid).expect("cannot fail").events.get(pos-1).expect("cannot fail");
+                                     (log.events[&eid].timestamp - log.events[&eid2].timestamp).num_milliseconds()
+                                 } else {
+                                     Duration::max_value().num_milliseconds()
                                  }
                              }).min().unwrap() as f64
               })).unwrap()
 
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::objects::{ocel::importer::import_ocel, ocdg::{generate_ocdg, Relations}};
+
+    use super::*;
+
+    lazy_static::lazy_static!{
+        static ref OCEL: Ocel = import_ocel("logs/ocel-complex-test.jsonocel").expect("What did you do to the file?");
+        static ref OCDG: Ocdg = generate_ocdg(&import_ocel("logs/ocel-complex-test.jsonocel").expect("What did you do to the file?"), &vec![Relations::DESCENDANTS]);
+    }
+
+    #[test]
+    fn test_activity_counts() {
+        let ac_counts = activity_counts(&OCEL);
+        assert_eq!(ac_counts["place order"], 3);
+        assert_eq!(ac_counts["check availability"], 9);
+        assert_eq!(ac_counts["failed delivery"], 1);
+    }
+
+    #[test]
+    fn test_activity_attr_operator() {
+        let ac_attr = activity_attr_operator(&OCEL, "place order", Operator::Max);
+        assert_eq!(ac_attr["prepaid-amount"], 1000.0);
+        
+        let ac_attr = activity_attr_operator(&OCEL, "check availability", Operator::Min);
+        assert_eq!(ac_attr["time-taken"], 2.0);
+        assert_eq!(ac_attr["effort"], 2.0);
+
+    }
+
+    #[test]
+    fn test_activity_otype_operator() {
+        let ac_otype = activity_otype_operator(&OCEL, Operator::Max);
+        assert_eq!(ac_otype["check availability"]["item"], 1.0);
+        assert_eq!(ac_otype["store package"]["item"], 3.0);
+        assert_eq!(ac_otype["unload package"]["route"], 1.0);
+    }
+
+    #[test]
+    fn test_activity_active_time_operator() {
+        assert_eq!(activity_active_time_operator(&OCEL, "place order", Operator::Mean), 280000.0);
+        assert_eq!(activity_active_time_operator(&OCEL, "start route", Operator::Mean), 90000.0);
+        assert_eq!(activity_active_time_operator(&OCEL, "receive payment", Operator::Max), Duration::max_value().num_milliseconds() as f64);
+    }
+
+    #[test]
+    fn test_activity_wait_time_operator() {
+        assert_eq!(activity_wait_time_operator(&OCEL, "receive payment", Operator::Max), 360000.0);
+        assert_eq!(activity_wait_time_operator(&OCEL, "place order", Operator::Max), Duration::max_value().num_milliseconds() as f64);
+    }
+
+
+}
