@@ -9,7 +9,7 @@ use crate::objects::{ocel::Ocel, ocdg::Relations};
 
 
 
-#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq)]
+#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq, Debug)]
 pub enum EventSituations {
     EventChoice,
     EventAttribute,
@@ -22,7 +22,7 @@ pub enum EventSituations {
 }
 
 impl EventSituations {
-    pub fn execute(&self, log: &Ocel, params: &EventSituationParameters, eid: usize) -> Option<Value> {
+    pub fn execute(&self, log: &Ocel, params: &EventSituationParameters, eid: &usize) -> Option<Value> {
         let event = &log.events[&eid];
         match self {
             EventSituations::EventChoice => {
@@ -49,11 +49,11 @@ impl EventSituations {
                 }
             },
             EventSituations::EventWait => {
-                let mut oldest_time: &DateTime<Utc> = &chrono::MAX_DATETIME;
+                let mut oldest_time: &DateTime<Utc> = &DateTime::<Utc>::MAX_UTC;
                 for oid in event.omap.iter() {
                     let obj = &log.objects[&oid];
-                    if *obj.events.first().expect("cannot fail") != eid {
-                        let prev_event: &usize = &obj.events[obj.events.iter().position(|&eid2| eid2 == eid).unwrap() - 1];
+                    if *obj.events.first().expect("cannot fail") != *eid {
+                        let prev_event: &usize = &obj.events[obj.events.iter().position(|&eid2| eid2 == *eid).unwrap() - 1];
                         let prev_timestamp: &DateTime<Utc> = &log.events[prev_event].timestamp;
                         if prev_timestamp < oldest_time {
                             oldest_time = prev_timestamp;
@@ -61,16 +61,16 @@ impl EventSituations {
                     }
                 }
 
-                if oldest_time != &chrono::MAX_DATETIME {
+                if oldest_time != &DateTime::<Utc>::MAX_UTC {
                     return Some(json!(log.events[&eid].timestamp.timestamp_millis() - oldest_time.timestamp_millis()));
                 }
             },
             EventSituations::EventDuration => {
-                let mut youngest_time: &DateTime<Utc> = &chrono::MIN_DATETIME;
+                let mut youngest_time: &DateTime<Utc> = &DateTime::<Utc>::MIN_UTC;
                 for oid in event.omap.iter() {
                     let obj = &log.objects[&oid];
-                    if *obj.events.last().expect("cannot fail") != eid {
-                        let prev_event: &usize = &obj.events[obj.events.iter().position(|&eid2| eid2 == eid).unwrap() + 1];
+                    if *obj.events.last().expect("cannot fail") != *eid {
+                        let prev_event: &usize = &obj.events[obj.events.iter().position(|&eid2| eid2 == *eid).unwrap() + 1];
                         let next_timestamp: &DateTime<Utc> = &log.events[prev_event].timestamp;
                         if next_timestamp > youngest_time {
                             youngest_time = next_timestamp;
@@ -78,7 +78,7 @@ impl EventSituations {
                     }
                 }
 
-                if youngest_time != &chrono::MIN_DATETIME {
+                if youngest_time != &DateTime::<Utc>::MIN_UTC {
                     return Some(json!(youngest_time.timestamp_millis() - log.events[&eid].timestamp.timestamp_millis()));
                 }
             },
@@ -89,7 +89,7 @@ impl EventSituations {
                             let mut oid_fit: Vec<&usize> = vec![];
                             for oid in event.omap.iter() {
                                 if otypes.contains(&log.objects[&oid].obj_type.as_str()) {
-                                    oid_fit.push(oid);
+                                    oid_fit.push(&oid);
                                 }
                             }
                             if !oid_fit.is_empty() {
@@ -137,7 +137,7 @@ pub struct EventSituationConfig<'a> {
 
 pub fn collect_event_targets(log: &Ocel, situation: EventSituations, params: EventSituationParameters) -> Vec<(usize, Value)> {
     log.events.keys()
-              .map(|eid| (*eid, situation.execute(&log, &params, *eid)))
+              .map(|eid| (*eid, situation.execute(&log, &params, eid)))
               .filter(|(_, val)| val.is_some())
               .map(|(eid, val)| (eid, val.unwrap()))
               .collect()
@@ -162,8 +162,8 @@ mod tests {
         let mut params_bad = EventSituationParameters::default();
         params_bad.activities = Some(HashSet::from(["B"]));
 
-        assert_eq!(situation.execute(&log, &params_good, eid).unwrap(), json!("A"));
-        assert_eq!(situation.execute(&log, &params_bad, eid), None);
+        assert_eq!(situation.execute(&log, &params_good, &eid).unwrap(), json!("A"));
+        assert_eq!(situation.execute(&log, &params_bad, &eid), None);
     }
 
     #[test]
@@ -176,8 +176,8 @@ mod tests {
         let mut params_bad = EventSituationParameters::default();
         params_bad.property = Some("not-known-key");
 
-        assert_eq!(situation.execute(&log, &params_good, eid).unwrap(), json!(1000.0));
-        assert_eq!(situation.execute(&log, &params_bad, eid), None);
+        assert_eq!(situation.execute(&log, &params_good, &eid).unwrap(), json!(1000.0));
+        assert_eq!(situation.execute(&log, &params_bad, &eid), None);
     }
 
     #[test]
@@ -190,8 +190,8 @@ mod tests {
         let mut params_bad = EventSituationParameters::default();
         params_bad.property = Some("not-known-key");
 
-        assert_eq!(situation.execute(&log, &params_good, eid).unwrap(), json!(null));
-        assert_eq!(situation.execute(&log, &params_bad, eid), None);
+        assert_eq!(situation.execute(&log, &params_good, &eid).unwrap(), json!(null));
+        assert_eq!(situation.execute(&log, &params_bad, &eid), None);
     }
     
     #[test]
@@ -202,8 +202,8 @@ mod tests {
         let situation = EventSituations::EventWait;
         let params = EventSituationParameters::default();
 
-        assert_eq!(situation.execute(&log, &params, eid_good).unwrap(), json!(3600000));
-        assert_eq!(situation.execute(&log, &params, eid_bad), None);
+        assert_eq!(situation.execute(&log, &params, &eid_good).unwrap(), json!(3600000));
+        assert_eq!(situation.execute(&log, &params, &eid_bad), None);
     }
 
     #[test]
@@ -214,8 +214,8 @@ mod tests {
         let situation = EventSituations::EventDuration;
         let params = EventSituationParameters::default();
 
-        assert_eq!(situation.execute(&log, &params, eid_good).unwrap(), json!(3600000));
-        assert_eq!(situation.execute(&log, &params, eid_bad), None);
+        assert_eq!(situation.execute(&log, &params, &eid_good).unwrap(), json!(3600000));
+        assert_eq!(situation.execute(&log, &params, &eid_bad), None);
     }
 
 
@@ -230,10 +230,10 @@ mod tests {
 
         let o1oid: &usize = log.object_map.get_by_left(&"o1".to_string()).unwrap();
 
-        assert_eq!(situation.execute(&log, &params, eid).unwrap(), json!(vec![o1oid]));
+        assert_eq!(situation.execute(&log, &params, &eid).unwrap(), json!(vec![o1oid]));
 
         params.object_types = Some(HashSet::from(["worker"]));
-        assert_eq!(situation.execute(&log, &params, eid), None);
+        assert_eq!(situation.execute(&log, &params, &eid), None);
     }
 
     #[test]
@@ -244,10 +244,10 @@ mod tests {
         let mut params = EventSituationParameters::default();
         params.object_types = Some(HashSet::from(["worker"]));
 
-        assert_eq!(situation.execute(&log, &params, eid).unwrap(), json!(vec!["worker"]));
+        assert_eq!(situation.execute(&log, &params, &eid).unwrap(), json!(vec!["worker"]));
 
         params.object_types = Some(HashSet::from(["order"]));
-        assert_eq!(situation.execute(&log, &params, eid), None);
+        assert_eq!(situation.execute(&log, &params, &eid), None);
     }
 
     #[test]

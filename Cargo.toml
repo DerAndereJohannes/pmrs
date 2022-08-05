@@ -38,3 +38,4 @@ clap = {version = "3.2", features = ["yaml"]}
 bimap = "0.6"
 polars = {version = "0.22", features = ["dtype-u8"] }
 lazy_static = "1.4"
+transpose = "0.2"

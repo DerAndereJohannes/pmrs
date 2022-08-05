@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
+use polars::prelude::{DataFrame, Series, NamedFrom};
+use rayon::prelude::*;
 use serde_json::Value;
 use strum::{EnumString, IntoStaticStr, Display, IntoEnumIterator};
 
 use crate::objects::{ocel::Ocel, ocdg::{Ocdg, Relations}, linker::link_objects};
 
-#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq)]
+#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq, Debug)]
 pub enum EventPoint {
     RelationCreatedCounts,
     OmapTypeCounts,
@@ -18,7 +20,128 @@ pub enum EventPoint {
 pub struct EventPointConfig<'a> {
     pub ocel: &'a Ocel,
     pub ocdg: &'a Ocdg,
-    pub params: &'a HashMap<EventPoint, Option<Value>>
+    pub params: &'a Vec<(EventPoint, Option<Value>)>
+}
+
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>>
+where
+    T: Clone,
+{
+    assert!(!v.is_empty());
+    (0..v[0].len())
+        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .collect()
+}
+
+
+pub fn event_point_features(config: EventPointConfig) -> DataFrame {
+    // let object_linker = link_objects(&config.ocel.object_map, &config.ocdg.object_map);
+    let ev_str_vec: Vec<&str> = config.ocel.events.keys().map(|eid| config.ocel.event_map.get_by_right(eid).unwrap().as_str()).collect();
+
+    let mut series_vec: Vec<Series> = vec![Series::new("eids", ev_str_vec.clone())];
+
+    for (feature, _params) in config.params {
+        match feature {
+            EventPoint::RelationCreatedCounts => {
+                let mut feature_values: Vec<Vec<u64>> = vec![vec![0;Relations::iter().count()];ev_str_vec.len()];
+                feature_values.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                *v = relations_created_counts(&config.ocel, &config.ocdg, &i).iter().map(|rc| *rc as u64).collect();
+                              });
+
+                for (v, rel) in transpose(feature_values).iter().zip(Relations::iter()) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, rel).as_str(), v));
+                }
+            },
+            EventPoint::OmapTypeCounts => {
+                let ot_order = config.ocel.global_log["ocel:object-types"].as_array().unwrap().to_vec();
+                let ot_order_str: Vec<&str> = ot_order.iter().map(|s| s.as_str().unwrap()).collect();
+                let mut feature_values: Vec<Vec<u64>> = vec![vec![0;ot_order.len()]; ev_str_vec.len()];
+                feature_values.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                  let feature = omap_type_counts(&config.ocel, &i);
+                                  let map_to_vec = ot_order_str.iter().map(|ot| {
+                                                                        match feature.get(*ot) {
+                                                                            Some(res) => *res as u64,
+                                                                            None => 0 as u64
+                                                                        }
+                                                                        })
+                                                                  .collect::<Vec<u64>>();
+                                  *v = map_to_vec;
+
+                              }); 
+
+                for (v, ot) in transpose(feature_values).iter().zip(ot_order_str) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, ot).as_str(), v));
+                }
+            },
+            EventPoint::OutputObjectTypeCounts => {
+                let ot_order = config.ocel.global_log["ocel:object-types"].as_array().unwrap().to_vec();
+                let ot_order_str: Vec<&str> = ot_order.iter().map(|s| s.as_str().unwrap()).collect();
+                let mut feature_values: Vec<Vec<u64>> = vec![vec![0;ot_order.len()]; ev_str_vec.len()];
+                feature_values.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                  let feature = output_object_type_count(&config.ocel, &i);
+                                  let map_to_vec = ot_order_str.iter().map(|ot| {
+                                                                        match feature.get(*ot) {
+                                                                            Some(res) => *res as u64,
+                                                                            None => 0 as u64
+                                                                        }
+                                                                        })
+                                                                  .collect::<Vec<u64>>();
+                                  *v = map_to_vec;
+
+                              }); 
+
+                for (v, ot) in transpose(feature_values).iter().zip(ot_order_str) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, ot).as_str(), v));
+                }
+                
+            },
+            EventPoint::InputObjectTypeCounts => {
+                let ot_order = config.ocel.global_log["ocel:object-types"].as_array().unwrap().to_vec();
+                let ot_order_str: Vec<&str> = ot_order.iter().map(|s| s.as_str().unwrap()).collect();
+                let mut feature_values: Vec<Vec<u64>> = vec![vec![0;ot_order.len()]; ev_str_vec.len()];
+                feature_values.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                  let feature = input_object_type_count(&config.ocel, &i);
+                                  let map_to_vec = ot_order_str.iter().map(|ot| {
+                                                                        match feature.get(*ot) {
+                                                                            Some(res) => *res as u64,
+                                                                            None => 0 as u64
+                                                                        }
+                                                                        })
+                                                                  .collect::<Vec<u64>>();
+                                  *v = map_to_vec;
+
+                              }); 
+
+                for (v, ot) in transpose(feature_values).iter().zip(ot_order_str) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, ot).as_str(), v));
+                }
+
+            },
+            EventPoint::ActivityOhe => {
+                let mut feature_values: Vec<Vec<u8>> = vec![vec![0;config.ocel.activities.len()];ev_str_vec.len()];
+                feature_values.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                *v = activity_ohe(&config.ocel, &i).iter().map(|rc| *rc as u8).collect();
+                              });
+
+                for (v, act) in transpose(feature_values).iter().zip(config.ocel.activities.iter()) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, act).as_str(), v));
+                }
+                
+            }
+        }
+    }
+
+    DataFrame::new(series_vec).unwrap()
 }
 
 
@@ -169,6 +292,18 @@ mod tests {
             }
         
         });
+    }
+    
+    #[test]
+    fn test_user_facing_suite() {
+        let mut feature_vec: Vec<(EventPoint, Option<Value>)> = vec![];
+        feature_vec.push((EventPoint::RelationCreatedCounts, None));
+        feature_vec.push((EventPoint::ActivityOhe, None));
+        let config = EventPointConfig {ocel: &OCEL, ocdg: &OCDG, params: &feature_vec};
+        let res = event_point_features(config);
+        assert_eq!(res["RelationCreatedCounts:DESCENDANTS:count"].sum::<usize>().unwrap(), 9);
+        assert_eq!(res["ActivityOhe:\"place order\":count"].sum::<usize>().unwrap(), 3);
+
     }
 
 }

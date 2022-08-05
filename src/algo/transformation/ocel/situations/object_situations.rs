@@ -19,7 +19,7 @@ pub enum ObjectSituations {
 
 
 impl ObjectSituations {
-    pub fn execute(&self, log: &Ocel, params: &ObjectSituationParameters, oid: usize) -> Option<Value> {
+    pub fn execute(&self, log: &Ocel, params: &ObjectSituationParameters, oid: &usize) -> Option<Value> {
         let obj = &log.objects[&oid];
         match self {
             ObjectSituations::ObjectAttribute => {
@@ -83,7 +83,7 @@ pub struct ObjectSituationConfig<'a> {
 
 pub fn collect_object_targets(log: &Ocel, situation: ObjectSituations, params: ObjectSituationParameters) -> Vec<(usize, Value)> {
     log.objects.keys()
-              .map(|oid| (*oid, situation.execute(&log, &params, *oid)))
+              .map(|oid| (*oid, situation.execute(&log, &params, oid)))
               .filter(|(_, val)| val.is_some())
               .map(|(oid, val)| (oid, val.unwrap()))
               .collect()
@@ -110,8 +110,8 @@ mod tests {
         let mut params_bad = ObjectSituationParameters::default();
         params_bad.property = Some("notaproperty");
 
-        assert_eq!(situation.execute(&log, &params_good, oid).unwrap(), json!(2999.99));
-        assert_eq!(situation.execute(&log, &params_bad, oid), None);
+        assert_eq!(situation.execute(&log, &params_good, &oid).unwrap(), json!(2999.99));
+        assert_eq!(situation.execute(&log, &params_bad, &oid), None);
     }
 
     #[test]
@@ -124,8 +124,8 @@ mod tests {
         let mut params_bad = ObjectSituationParameters::default();
         params_bad.property = Some("price");
 
-        assert_eq!(situation.execute(&log, &params_good, oid).unwrap(), json!(null));
-        assert_eq!(situation.execute(&log, &params_bad, oid), None);
+        assert_eq!(situation.execute(&log, &params_good, &oid).unwrap(), json!(null));
+        assert_eq!(situation.execute(&log, &params_bad, &oid), None);
     }
         
 
@@ -139,8 +139,8 @@ mod tests {
         let mut params_bad = ObjectSituationParameters::default();
         params_bad.activities = Some(HashSet::from(["A"]));
 
-        assert_eq!(situation.execute(&log, &params_good, oid).unwrap(), json!(vec!["B"]));
-        assert_eq!(situation.execute(&log, &params_bad, oid), None);
+        assert_eq!(situation.execute(&log, &params_good, &oid).unwrap(), json!(vec!["B"]));
+        assert_eq!(situation.execute(&log, &params_bad, &oid), None);
     } 
 
     #[test]
@@ -152,8 +152,8 @@ mod tests {
         let mut params = ObjectSituationParameters::default();
         params.activities = Some(HashSet::from(["B"]));
 
-        assert_eq!(situation.execute(&log, &params, oid_good).unwrap(), json!(3600000));
-        assert_eq!(situation.execute(&log, &params, oid_bad), None);
+        assert_eq!(situation.execute(&log, &params, &oid_good).unwrap(), json!(3600000));
+        assert_eq!(situation.execute(&log, &params, &oid_bad), None);
     } 
     
     #[test]

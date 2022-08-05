@@ -1,11 +1,12 @@
+use std::fmt;
 use std::iter::Iterator;
 use itertools::Itertools;
 use num_traits::Num;
 use num_traits::{FromPrimitive, ToPrimitive};
 use stats;
-use strum::EnumString;
+use strum::{EnumString, EnumIter};
 
-#[derive(Debug, EnumString)]
+#[derive(Debug, EnumString, EnumIter)]
 pub enum Operator {
     Mean,
     Median,
@@ -15,6 +16,12 @@ pub enum Operator {
     Min,
     Max,
     Count
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 

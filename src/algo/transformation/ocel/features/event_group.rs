@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::Duration;
+use polars::prelude::{DataFrame, Series, NamedFrom};
 use serde_json::Value;
 use strum::{EnumString, IntoStaticStr, Display};
 
@@ -8,7 +9,7 @@ use crate::objects::{ocel::Ocel, ocdg::Ocdg};
 
 use super::operator::Operator;
 
-#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq)]
+#[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq, Debug)]
 pub enum EventGroup {
     ActivityCounts,
     ActivityAttrOperator,
@@ -21,10 +22,85 @@ pub enum EventGroup {
 pub struct EventGroupConfig<'a> {
     pub ocel: &'a Ocel,
     pub ocdg: &'a Ocdg,
-    pub params: &'a HashMap<EventGroup, Option<Value>>
+    pub params: &'a Vec<(EventGroup, Option<Value>)>
 
 }
 
+pub fn event_group_features(config: EventGroupConfig) -> DataFrame {
+    // let object_linker = link_objects(&config.ocel.object_map, &config.ocdg.object_map);
+    let mut series_vec: Vec<Series> = vec![];
+
+    for (feature, params) in config.params {
+        match feature {
+            EventGroup::ActivityCounts => {
+                let counts = activity_counts(&config.ocel);
+                counts.iter().for_each(|(k, v)| {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, k).as_str(), vec![*v as u64]));
+                });
+            },
+            EventGroup::ActivityAttrOperator => {
+                if let Some(f_params) = params {
+                    let op_val: Option<&Value> = f_params.get("operator");
+                    let act_val: Option<&Value> = f_params.get("activity");
+                    if let (Some(act_valid), Some(op_valid)) = (act_val, op_val) {
+                        let act_str = act_valid.as_str().unwrap();
+                        let op_enum = Operator::from_str(op_valid.as_str().unwrap()).unwrap();
+                        let res = activity_attr_operator(&config.ocel, act_str, &op_enum);
+
+                        res.iter().for_each(|(k, v)| {
+                            series_vec.push(Series::new(format!("{:?}:{:?}:{:?}:{:?}", feature, act_str, k, op_enum).as_str(), vec![*v]))
+                        });
+                    }
+                }
+
+
+            },
+            EventGroup::ActivityObjectTypeOperator => {
+                if let Some(f_params) = params {
+                    let op_val: Option<&Value> = f_params.get("operator");
+                    if let Some(op_valid) = op_val {
+                        let op_enum = Operator::from_str(op_valid.as_str().unwrap()).unwrap();
+                        let res = activity_otype_operator(&config.ocel, &op_enum);
+
+                        res.iter().for_each(|(act, ot_map)| {
+                            ot_map.iter().for_each(|(ot, val)| {
+                                series_vec.push(Series::new(format!("{:?}:{:?}:{:?}:{:?}", feature, act, ot, op_enum).as_str(), vec![*val]));
+                            });
+                        });
+
+                    }
+                }
+                
+            },
+            EventGroup::ActivityActiveTimeOperator => {
+                if let Some(f_params) = params {
+                    let op_val: Option<&Value> = f_params.get("operator");
+                    let act_val: Option<&Value> = f_params.get("activity");
+                    if let (Some(act_valid), Some(op_valid)) = (act_val, op_val) {
+                        let act_str = act_valid.as_str().unwrap();
+                        let op_enum = Operator::from_str(op_valid.as_str().unwrap()).unwrap();
+                        series_vec.push(Series::new(format!("{:?}:{:?}:{:?}", feature, act_str, op_enum).as_str(), vec![activity_active_time_operator(&config.ocel, act_str, &op_enum)]));
+                    }
+                }
+            },
+            EventGroup::ActivityWaitTimeOperator => {
+                if let Some(f_params) = params {
+                    let op_val: Option<&Value> = f_params.get("operator");
+                    let act_val: Option<&Value> = f_params.get("activity");
+                    if let (Some(act_valid), Some(op_valid)) = (act_val, op_val) {
+                        let act_str = act_valid.as_str().unwrap();
+                        let op_enum = Operator::from_str(op_valid.as_str().unwrap()).unwrap();
+                        series_vec.push(Series::new(format!("{:?}:{:?}:{:?}", feature, act_str, op_enum).as_str(), vec![activity_wait_time_operator(&config.ocel, act_str, &op_enum)]));
+                    }
+                }
+
+            }
+        }
+    }
+
+
+    DataFrame::new(series_vec).unwrap()
+}
 
 pub fn activity_counts(log: &Ocel) -> HashMap<String, usize> {
     let mut activity_counter: HashMap<String, usize> = HashMap::new();
@@ -35,7 +111,7 @@ pub fn activity_counts(log: &Ocel) -> HashMap<String, usize> {
     activity_counter
 }
 
-pub fn activity_attr_operator(log: &Ocel, activity: &str, op: Operator) -> HashMap<String, f64> {
+pub fn activity_attr_operator(log: &Ocel, activity: &str, op: &Operator) -> HashMap<String, f64> {
     let mut activity_attrs: HashMap<String, Vec<f64>> = HashMap::new();
     log.events.iter().filter(|(_eid, values)| values.activity == activity)
                      .for_each(|(_eid, values)| {
@@ -50,12 +126,12 @@ pub fn activity_attr_operator(log: &Ocel, activity: &str, op: Operator) -> HashM
 
     activity_attrs.iter()
                   .for_each(|(attr, values)| {attr_operated.entry(attr.to_owned())
-                                                          .or_insert(op.execute(values.iter().map(|v| *v)).unwrap());
+                                                          .or_insert(op.execute(values.iter().map(|v| *v)).unwrap_or(0.0));
                   });
     attr_operated
 }
 
-pub fn activity_otype_operator(log: &Ocel, op: Operator) -> HashMap<String, HashMap<String, f64>> {
+pub fn activity_otype_operator(log: &Ocel, op: &Operator) -> HashMap<String, HashMap<String, f64>> {
     let mut activity_otype_vecmap: HashMap<String, HashMap<String, Vec<f64>>> = HashMap::new();
     log.events.iter().for_each(|(_eid, values)| {
         let mut omap_counts: HashMap<String, usize> = HashMap::new();
@@ -75,13 +151,13 @@ pub fn activity_otype_operator(log: &Ocel, op: Operator) -> HashMap<String, Hash
 
     activity_otype_vecmap.iter().for_each(|(act, othash)| {
         othash.iter()
-              .for_each(|(ot, vals)| {*activity_otype_opmap.entry(act.to_owned()).or_default().entry(ot.to_owned()).or_default() = op.execute(vals.iter().map(|v| *v)).unwrap()})
+              .for_each(|(ot, vals)| {*activity_otype_opmap.entry(act.to_owned()).or_default().entry(ot.to_owned()).or_default() = op.execute(vals.iter().map(|v| *v)).unwrap_or(0.0)})
     });
 
     activity_otype_opmap
 }
 
-pub fn activity_active_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
+pub fn activity_active_time_operator(log: &Ocel, act: &str, op: &Operator) -> f64 {
     op.execute(log.events.iter()
               .filter(|(_eid, values)| values.activity == act)
               .map(|(eid, values)| {
@@ -97,11 +173,11 @@ pub fn activity_active_time_operator(log: &Ocel, act: &str, op: Operator) -> f64
                                      Duration::max_value().num_milliseconds()
                                  }
                              }).max().unwrap() as f64
-              })).unwrap()
+              })).unwrap_or(0.0)
 
 }
 
-pub fn activity_wait_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
+pub fn activity_wait_time_operator(log: &Ocel, act: &str, op: &Operator) -> f64 {
     op.execute(log.events.iter()
               .filter(|(_eid, values)| values.activity == act)
               .map(|(eid, values)| {
@@ -116,7 +192,7 @@ pub fn activity_wait_time_operator(log: &Ocel, act: &str, op: Operator) -> f64 {
                                      Duration::max_value().num_milliseconds()
                                  }
                              }).min().unwrap() as f64
-              })).unwrap()
+              })).unwrap_or(0.0)
 
 }
 
@@ -141,10 +217,10 @@ mod tests {
 
     #[test]
     fn test_activity_attr_operator() {
-        let ac_attr = activity_attr_operator(&OCEL, "place order", Operator::Max);
+        let ac_attr = activity_attr_operator(&OCEL, "place order", &Operator::Max);
         assert_eq!(ac_attr["prepaid-amount"], 1000.0);
         
-        let ac_attr = activity_attr_operator(&OCEL, "check availability", Operator::Min);
+        let ac_attr = activity_attr_operator(&OCEL, "check availability", &Operator::Min);
         assert_eq!(ac_attr["time-taken"], 2.0);
         assert_eq!(ac_attr["effort"], 2.0);
 
@@ -152,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_activity_otype_operator() {
-        let ac_otype = activity_otype_operator(&OCEL, Operator::Max);
+        let ac_otype = activity_otype_operator(&OCEL, &Operator::Max);
         assert_eq!(ac_otype["check availability"]["item"], 1.0);
         assert_eq!(ac_otype["store package"]["item"], 3.0);
         assert_eq!(ac_otype["unload package"]["route"], 1.0);
@@ -160,16 +236,23 @@ mod tests {
 
     #[test]
     fn test_activity_active_time_operator() {
-        assert_eq!(activity_active_time_operator(&OCEL, "place order", Operator::Mean), 280000.0);
-        assert_eq!(activity_active_time_operator(&OCEL, "start route", Operator::Mean), 90000.0);
-        assert_eq!(activity_active_time_operator(&OCEL, "receive payment", Operator::Max), Duration::max_value().num_milliseconds() as f64);
+        assert_eq!(activity_active_time_operator(&OCEL, "place order", &Operator::Mean), 280000.0);
+        assert_eq!(activity_active_time_operator(&OCEL, "start route", &Operator::Mean), 90000.0);
+        assert_eq!(activity_active_time_operator(&OCEL, "receive payment", &Operator::Max), Duration::max_value().num_milliseconds() as f64);
     }
 
     #[test]
     fn test_activity_wait_time_operator() {
-        assert_eq!(activity_wait_time_operator(&OCEL, "receive payment", Operator::Max), 360000.0);
-        assert_eq!(activity_wait_time_operator(&OCEL, "place order", Operator::Max), Duration::max_value().num_milliseconds() as f64);
+        assert_eq!(activity_wait_time_operator(&OCEL, "receive payment", &Operator::Max), 360000.0);
+        assert_eq!(activity_wait_time_operator(&OCEL, "place order", &Operator::Max), Duration::max_value().num_milliseconds() as f64);
     }
 
-
+    #[test]
+    fn test_user_facing_suite() {
+        let mut feature_vec: Vec<(EventGroup, Option<Value>)> = vec![];
+        feature_vec.push((EventGroup::ActivityCounts, None));
+        let config = EventGroupConfig {ocel: &OCEL, ocdg: &OCDG, params: &feature_vec};
+        let res = event_group_features(config);
+        assert_eq!(res["ActivityCounts:\"pick item\":count"].sum::<i8>().unwrap(), 6);
+    }
 }
