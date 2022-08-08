@@ -13,5 +13,11 @@ This is a Process Mining Rust Library focussed on the new OCEL data format. The 
 ## Feature Extraction
 - OCEL/OCDG:
 	- Object Point Features
+	- Object Group Features
+	- Event Point Features
+	- Event Group Features
+	- Event Situation Targets
+	- Object Situation Targets
+	- Timeseries
 
 
