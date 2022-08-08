@@ -147,6 +147,7 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                                       .for_each(|(i, v)| {
                                         *v = object_type_interaction(&config.ocdg, config.ocdg.object_map.get_by_left(obj_str_vec[i]).unwrap(), otype_str) as u64;
                                       });
+
                         series_vec.push(Series::from_vec(format!("{:?}:{:?}", feature, otype_str).as_str(), feature_vector));
                     }
                 } 
@@ -199,7 +200,12 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                                 let oe_vec = (0..act_act_order.len()).into_iter()
                                                                      .map(|_| {
                                                                          let curr_pair = act_act_order[i];
-                                                                         oe_df[curr_pair.0][curr_pair.1] as u64
+                                                                         if let Some(ac1) = oe_df.get(curr_pair.0) {
+                                                                             if let Some(ac2) = ac1.get(curr_pair.1) {
+                                                                                 return *ac2 as u64;
+                                                                             }
+                                                                         }
+                                                                         0
                                                                      })
                                                                      .collect();
                                 *v = oe_vec;
@@ -349,7 +355,9 @@ pub fn object_wait_time(log: &Ocel, oid: &usize, act1: &str, act2: &str) -> Dura
                 } else if ev1 == usize::MAX {
                     if curr.activity == act1 {
                         ev1 = *item;
-                        time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
+                        if time_diff > Duration::zero() {
+                            time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
+                        }
                     }
                 } 
             }
