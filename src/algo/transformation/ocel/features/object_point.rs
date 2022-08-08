@@ -67,7 +67,7 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                 let feature_values: Vec<(usize, usize, u8)> = entity_order.par_iter()
                                                             .enumerate()
                                                             .map(|(index, log_oid)| {
-                                                                activity_existence(config.ocel, *log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, u8)>>()
+                                                                activity_existence(config.ocel, log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, u8)>>()
                                                             })
                                                             .flatten()
                                                             .collect();
@@ -84,7 +84,7 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                 let feature_values: Vec<(usize, usize, usize)> = entity_order.par_iter()
                                                             .enumerate()
                                                             .map(|(index, log_oid)| {
-                                                                activity_existence_count(config.ocel, *log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, usize)>>()
+                                                                activity_existence_count(config.ocel, log_oid).iter().enumerate().map(|(actid, res)| (index, actid, *res)).collect::<Vec<(usize, usize, usize)>>()
                                                             })
                                                             .flatten()
                                                             .collect();
@@ -146,7 +146,7 @@ pub fn unique_neighbor_count(ocdg: &Ocdg, oid: &usize) -> usize {
                                                    .count()
 }
 
-pub fn activity_existence(log: &Ocel, oid: usize) -> Vec<u8> {
+pub fn activity_existence(log: &Ocel, oid: &usize) -> Vec<u8> {
     let oe_activities: AHashSet<&String> = AHashSet::from_iter(log.objects[&oid].events.iter()
                                             .map(|oe| &log.events[&oe].activity));
     log.activities.iter()
@@ -155,7 +155,7 @@ pub fn activity_existence(log: &Ocel, oid: usize) -> Vec<u8> {
 }
 
 
-pub fn activity_existence_count(log: &Ocel, oid: usize) -> Vec<usize> {
+pub fn activity_existence_count(log: &Ocel, oid: &usize) -> Vec<usize> {
     let oe_activities: HashMap<&String, usize> = log.objects[&oid].events.iter()
                                                                          .map(|oe| &log.events[&oe].activity)
                                                                          .counts();
@@ -167,10 +167,10 @@ pub fn activity_existence_count(log: &Ocel, oid: usize) -> Vec<usize> {
               .collect_vec()
 }
 
-pub fn activity_value_operator(log: &Ocel, oid: usize, attr: String, op: Operator) -> f64 {
+pub fn activity_value_operator(log: &Ocel, oid: &usize, attr: &str, op: Operator) -> f64 {
     op.execute(log.objects[&oid].events.iter()
-                            .filter(|oe| !log.events[&oe].vmap.contains_key(&attr))
-                            .map(|oe| match &log.events[&oe].vmap[&attr] {
+                            .filter(|oe| log.events[&oe].vmap.contains_key(&attr.to_string()))
+                            .map(|oe| match &log.events[&oe].vmap[&attr.to_string()] {
                                         Value::Number(v) => v.as_f64().unwrap(),
                                         _ => 0.0
                                     })).unwrap()
@@ -272,10 +272,9 @@ pub fn object_wait_time(log: &Ocel, oid: &usize, act1: &str, act2: &str) -> Dura
                 } else if ev1 == usize::MAX {
                     if curr.activity == act1 {
                         ev1 = *item;
+                        time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
                     }
-                } else if time_diff == Duration::zero() {
-                    time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
-                }
+                } 
             }
         });
     }
@@ -340,7 +339,7 @@ pub fn object_direct_rel_count(ocdg: &Ocdg, oid: &usize, rel: &Relations) -> usi
         return neighs.enumerate().map(|(_i, neigh)| {
             let neigh_id = &ocdg.net[neigh];
             let conn = ocdg.irels.get(oid).unwrap().get(neigh_id).unwrap();
-            if conn.contains_key(&(rel.relation_index() as usize)) {
+            if conn.contains_key(&(rel.relation_index())) {
                 1
             } else {
                 0
@@ -352,3 +351,146 @@ pub fn object_direct_rel_count(ocdg: &Ocdg, oid: &usize, rel: &Relations) -> usi
 }
 
 pub fn object_subgraph_count() {todo!()}
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use crate::objects::{ocel::importer::import_ocel, ocdg::generate_ocdg};
+
+    use super::*;
+
+    static ERROR: f64 = 0.0001;
+
+    lazy_static::lazy_static!{
+        static ref OCEL: Ocel = import_ocel("logs/ocel-complex-test.jsonocel").expect("What did you do to the file?");
+        static ref OCDG: Ocdg = generate_ocdg(&import_ocel("logs/ocel-complex-test.jsonocel").expect("What did you do to the file?"), &vec![Relations::INTERACTS]);
+    }
+
+
+    #[test]
+    fn test_unique_neighbour_count() {
+        let oid = OCDG.object_map.get_by_left("r1").expect("cannot fail");
+        assert_eq!(unique_neighbor_count(&OCDG, oid), 4); 
+    }
+    
+    #[test]
+    fn test_activity_existence() {
+        let correct: HashSet<&str> = HashSet::from_iter(["place order", "check availability", "pick item", "receive payment", "send invoice"]);
+        let oid = OCEL.object_map.get_by_left("o1").expect("cannot fail");
+        assert_eq!(activity_existence(&OCEL, oid).iter().sum::<u8>(), 5);
+        activity_existence(&OCEL, oid).iter().enumerate().for_each(|(i, val)| {
+            match val {
+                0 => {assert!(!correct.contains(&OCEL.activities[i].as_str()))},
+                _ => {assert!(correct.contains(&OCEL.activities[i].as_str()))}
+            }
+        });
+    }
+
+    #[test]
+    fn test_activity_existence_count() {
+        let correct: HashMap<&str, usize> = HashMap::from_iter([("place order", 1), ("check availability", 3), ("pick item", 2), ("receive payment", 1), ("send invoice", 1)]);
+        let oid = OCEL.object_map.get_by_left("o1").expect("cannot fail");
+        assert_eq!(activity_existence_count(&OCEL, oid).iter().sum::<usize>(), 8); 
+
+        activity_existence_count(&OCEL, oid).iter().enumerate().for_each(|(i, val)| {
+            match val {
+                0 => {assert!(!correct.contains_key(&OCEL.activities[i].as_str()))},
+                _ => {assert_eq!(*val, correct[OCEL.activities[i].as_str()])}
+            }
+        
+        });
+    }
+
+    #[test]
+    fn test_activity_value_operator() {
+        let oid = OCEL.object_map.get_by_left("i1").expect("cannot fail");
+        let attr = "prepaid-amount";
+        assert_eq!(activity_value_operator(&OCEL, oid, attr, Operator::Max), 1000.0); 
+    }
+
+    #[test]
+    fn test_object_lifetime() {
+        let oid = OCEL.object_map.get_by_left("i1").expect("cannot fail");
+        assert_eq!(object_lifetime(&OCEL, oid).num_milliseconds(), 1980000);
+    }
+
+    #[test]
+    fn test_unit_set_ratio() {
+        let oid = OCEL.object_map.get_by_left("i1").expect("cannot fail");
+        assert!((object_unit_set_ratio(&OCEL, oid) - 0.222222).abs() < ERROR);
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        assert!((object_unit_set_ratio(&OCEL, oid) - 1.0).abs() < ERROR);
+    }
+    
+    #[test]
+    fn test_object_average_event_interaction() {
+        let oid = OCEL.object_map.get_by_left("i1").expect("cannot fail");
+        assert!((object_average_event_interaction(&OCEL, oid) - 2.44444).abs() < ERROR);
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        assert!((object_average_event_interaction(&OCEL, oid) - 1.6).abs() < ERROR);
+    }
+
+    #[test]
+    fn test_object_type_interaction() {
+        let oid = OCDG.object_map.get_by_left("i1").expect("cannot fail");
+        assert_eq!(object_type_interaction(&OCDG, oid, "order"), 1);
+        let oid = OCDG.object_map.get_by_left("r2").expect("cannot fail");
+        assert_eq!(object_type_interaction(&OCDG, oid, "item"), 6);
+    }
+
+    #[test]
+    fn test_events_directly_follows() {
+        let oid = OCEL.object_map.get_by_left("o3").expect("cannot fail");
+        let oid_df = object_events_directly_follows(&OCEL, oid);
+        assert_eq!(oid_df["place order"]["check availability"], 1);
+        assert_eq!(oid_df["pick item"]["send invoice"], 1);
+        assert_eq!(oid_df["send invoice"]["receive payment"], 1);
+        assert_eq!(oid_df["check availability"]["check availability"], 1);
+        assert_eq!(oid_df["check availability"]["pick item"], 1);
+        
+        // check if double works
+        let oid = OCEL.object_map.get_by_left("o1").expect("cannot fail");
+        let oid_df = object_events_directly_follows(&OCEL, oid);
+        assert_eq!(oid_df["check availability"]["pick item"], 2);
+    }
+
+    #[test]
+    fn test_object_wait_time() {
+        let oid = OCEL.object_map.get_by_left("o1").expect("cannot fail");
+        let from_activity = "place order";
+        let to_activity = "receive payment";
+        assert_eq!(object_wait_time(&OCEL, oid, from_activity, to_activity).num_milliseconds(), 1320000);
+
+    }
+
+    #[test]
+    fn test_object_oe_leaf() {
+        let oid = OCEL.object_map.get_by_left("o3").expect("cannot fail");
+        assert_eq!(object_oe_leaf(&OCEL, oid), true);
+
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        assert_eq!(object_oe_leaf(&OCEL, oid), false);
+        
+    }
+
+    #[test]
+    fn test_object_oe_root() {
+        let oid = OCEL.object_map.get_by_left("o3").expect("cannot fail");
+        assert_eq!(object_oe_root(&OCEL, oid), true);
+
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        assert_eq!(object_oe_root(&OCEL, oid), false);
+
+    }
+
+    #[test]
+    fn test_object_direct_rel_count() {
+        let oid = OCDG.object_map.get_by_left("o1").expect("cannot fail");
+        assert_eq!(object_direct_rel_count(&OCDG, oid, &Relations::INTERACTS), 2);
+
+        let oid = OCDG.object_map.get_by_left("r2").expect("cannot fail");
+        assert_eq!(object_direct_rel_count(&OCDG, oid, &Relations::INTERACTS), 8);
+    }
+}

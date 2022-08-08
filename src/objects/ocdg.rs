@@ -232,7 +232,7 @@ pub struct Ocdg {
     pub event_map: BiMap<String, usize>,
     pub inodes: IntMap<usize, NodeIndex>,
     pub iedges: IntMap<usize, IntMap<usize, EdgeIndex>>,
-    pub irels: IntMap<usize, IntMap<usize,IntMap<usize, IntSet<usize>>>>
+    pub irels: IntMap<usize, IntMap<usize,IntMap<u8, IntSet<usize>>>>
 }
 
 impl Ocdg {

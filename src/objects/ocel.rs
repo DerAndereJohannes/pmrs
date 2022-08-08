@@ -3,10 +3,10 @@ pub mod exporter;
 pub mod validator;
 
 use bimap::BiMap;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Deserializer};
 use nohash_hasher::{IntMap, IntSet};
 use serde_json::Value;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, TimeZone};
 use indexmap::IndexMap;
 use ahash::{AHashMap, AHashSet, RandomState};
 use std::cmp::Ordering;
@@ -38,12 +38,30 @@ pub struct OcelObjectSerde{
 pub struct OcelEventSerde {
     #[serde(alias = "ocel:activity", rename(serialize = "ocel:activity"))]
     pub activity: String,
-    #[serde(alias = "ocel:timestamp", rename(serialize = "ocel:timestamp"))]
+    #[serde(alias = "ocel:timestamp", rename(serialize = "ocel:timestamp"), deserialize_with="timezone_default_utc")]
     pub timestamp: DateTime<Utc>,
     #[serde(alias = "ocel:omap", rename(serialize = "ocel:omap"))]
     pub omap: AHashSet<String>,
     #[serde(alias = "ocel:vmap", rename(serialize = "ocel:vmap"))]
     pub vmap: AHashMap<String, Value>,
+}
+
+fn timezone_default_utc<'de, D: Deserializer<'de>>(d: D) -> Result<DateTime<Utc>, D::Error> {
+    let s_input: Option<String> = Deserialize::deserialize(d)?;
+    let mut s: String = s_input.unwrap();
+
+    match DateTime::parse_from_rfc3339(s.as_str()) {
+        Ok(dt) => {Ok(DateTime::<Utc>::from(dt))},
+        Err(_e) => {
+            s.push('Z');
+            match DateTime::parse_from_rfc3339(s.as_str()) {
+                Ok(dt) => {Ok(DateTime::<Utc>::from(dt))},
+                Err(_e) => {Ok(DateTime::<Utc>::from(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0)))}
+            }
+        }
+    }
+
+
 }
 
 #[derive(Debug, Clone)]

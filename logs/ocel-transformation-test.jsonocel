@@ -1,0 +1,89 @@
+{
+  "ocel:global-log": {
+    "ocel:version": "0.1",
+    "ocel:ordering": "timestamp",
+    "ocel:attribute-names": [
+      "name",
+      "price",
+      "total",
+      "salary",
+      "resource",
+      "prepaid-amount",
+      "errors"
+    ],
+    "ocel:object-types": [
+      "item",
+      "order",
+      "worker"
+    ]
+  },
+  "ocel:global-event": {
+    "ocel:activity": "__INVALID__"
+  },
+  "ocel:global-object": {
+    "ocel:type": "__INVALID__"
+  },
+  "ocel:events": {
+    "e1": {
+      "ocel:activity": "A",
+      "ocel:timestamp": "2022-01-01T10:00:00+01:00",
+      "ocel:omap": [
+        "o1",
+        "i1"
+      ],
+      "ocel:vmap": {
+        "resource": "John",
+        "prepaid-amount": 1000.0
+      }
+    },
+    "e2": {
+      "ocel:activity": "B",
+      "ocel:timestamp": "2022-01-01T11:00:00+01:00",
+      "ocel:omap": [
+        "i1",
+        "w1"
+      ],
+      "ocel:vmap": {
+        "errors": null
+      }
+    },
+    "e3": {
+      "ocel:activity": "B",
+      "ocel:timestamp": "2022-01-01T12:00:00+01:00",
+      "ocel:omap": [
+        "w1",
+        "i2"
+      ],
+      "ocel:vmap": {}
+    }
+  },
+  "ocel:objects": {
+    "o1": {
+      "ocel:type": "order",
+      "ocel:ovmap": {
+        "total": 2999.99
+      }
+    },
+    "w1": {
+      "ocel:type": "worker",
+      "ocel:ovmap": {
+        "salary": 4000
+      }
+    },
+    "i1": {
+      "ocel:type": "item",
+      "ocel:ovmap": {
+        "name": null,
+        "price": 2000.00
+      }
+    },
+    "i2": {
+      "ocel:type": "item",
+      "ocel:ovmap": {
+        "name": "Monitor",
+        "price": 449.99
+      }
+    }
+  }
+}
+

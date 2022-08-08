@@ -31,7 +31,7 @@ pub fn import_gexf_ocdg(file_path: &str) -> Result<Ocdg, Box<dyn Error>> {
            let re: Vec<&str> = ron::from_str(&rel.value)?;
            ocdg.irels.entry(src_o).or_default()
                      .entry(tar_o).or_default()
-                     .entry(rel.attr.parse::<usize>()?)
+                     .entry(rel.attr.parse::<u8>()?)
                      .or_insert(re.iter().map(|eid| {
                         match ocdg.event_map.get_by_left(*eid) {
                             Some(event_num) => {
@@ -84,7 +84,7 @@ pub fn import_gexf_ocdg_link_ocel(file_path: &str, log: &Ocel) -> Result<Ocdg, B
            let re: Vec<&str> = ron::from_str(&rel.value)?;
            ocdg.irels.entry(*src_o).or_default()
                      .entry(*tar_o).or_default()
-                     .entry(rel.attr.parse::<usize>()?)
+                     .entry(rel.attr.parse::<u8>()?)
                      .or_insert(re.iter().map(|eid| log.event_map.get_by_left(*eid).unwrap().to_owned()).collect());
        }
 

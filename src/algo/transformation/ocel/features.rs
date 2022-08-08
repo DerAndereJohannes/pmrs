@@ -1,5 +1,5 @@
 pub mod object_point;
-pub(crate) mod object_group;
-pub(crate) mod event_point;
-pub(crate) mod event_group;
-pub(crate) mod operator;
+pub mod object_group;
+pub mod event_point;
+pub mod event_group;
+pub mod operator;
