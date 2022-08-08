@@ -355,8 +355,9 @@ pub fn object_wait_time(log: &Ocel, oid: &usize, act1: &str, act2: &str) -> Dura
                 } else if ev1 == usize::MAX {
                     if curr.activity == act1 {
                         ev1 = *item;
-                        if time_diff > Duration::zero() {
-                            time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
+                        time_diff = log.events[&ev2].timestamp - log.events[&ev1].timestamp;
+                        if time_diff < Duration::zero() {
+                            time_diff = Duration::zero();
                         }
                     }
                 } 
