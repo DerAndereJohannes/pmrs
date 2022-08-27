@@ -10,9 +10,18 @@
 // use std::collections::HashMap;
 // use std::time::Instant;
 // use petgraph::dot::Dot;
+use pmrs::objects::ocdg::decomposition::decompose_in_place;
+use pmrs::objects::ocdg::exporter::export_ocdg;
+use pmrs::objects::ocdg::{generate_ocdg, Ocdg, Relations};
+use pmrs::objects::ocel::importer::import_ocel;
 
-// #[test]
-// fn test_ocdg_generation(){
+#[test]
+fn test_ocdg_generation() {
+    let default: Ocdg = generate_ocdg(&import_ocel("logs/ocel-decomposition-test.jsonocel").expect("What did you do to the file?"), &vec![Relations::DESCENDANTS]);
+    let decomposed: Ocdg = decompose_in_place(default);
+    export_ocdg(&decomposed, "we-will-see.gexf").unwrap();
+    
+}
 //     // let import_time = Instant::now();
 //     // let log: Ocel = import_ocel("logs/min.jsonocel").unwrap();
 //     let log: Ocel = import_ocel("../ocel-features/examples/logs/actual-min.jsonocel").unwrap();

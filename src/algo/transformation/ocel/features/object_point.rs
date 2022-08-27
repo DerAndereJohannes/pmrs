@@ -12,6 +12,7 @@ use rayon::prelude::*;
 
 use crate::objects::ocel::Ocel;
 use crate::objects::ocdg::{Ocdg, Relations};
+use crate::algo::transformation::ocel::features::event_point::{input_object_type_count, output_object_type_count};
 use super::operator::Operator;
 
 #[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq, Debug)]
@@ -29,7 +30,9 @@ pub enum ObjectPoint {
     ObjectWaitTime,
     ObjectStartEnd,
     ObjectDirectRelationCount,
-    SubgraphExistenceCount
+    SubgraphExistenceCount,
+    ObjectInputs,
+    ObjectOutputs
 }
 
 
@@ -198,8 +201,8 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                               .for_each(|(i, v)| {
                                 let oe_df = object_events_directly_follows(&config.ocel, config.ocel.object_map.get_by_left(obj_str_vec[i]).unwrap());
                                 let oe_vec = (0..act_act_order.len()).into_iter()
-                                                                     .map(|_| {
-                                                                         let curr_pair = act_act_order[i];
+                                                                     .map(|j| {
+                                                                         let curr_pair = act_act_order[j];
                                                                          if let Some(ac1) = oe_df.get(curr_pair.0) {
                                                                              if let Some(ac2) = ac1.get(curr_pair.1) {
                                                                                  return *ac2 as u64;
@@ -215,6 +218,52 @@ pub fn object_point_features(config: ObjectPointConfig) -> DataFrame {
                     series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, act_act).as_str(), v));
                 }
 
+            },
+            ObjectPoint::ObjectInputs => {
+                let ot_order = config.ocel.global_log["ocel:object-types"].as_array().unwrap().to_vec();
+                let ot_order_str: Vec<&str> = ot_order.iter().map(|s| s.as_str().unwrap()).collect();
+                let mut feature_vector: Vec<Vec<u64>> = vec![vec![0;ot_order.len()]; obj_str_vec.len()];
+                feature_vector.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                  let feature = object_inputs(&config.ocel, config.ocel.object_map.get_by_left(obj_str_vec[i]).unwrap());
+                                  let map_to_vec = ot_order_str.iter().map(|ot| {
+                                                                        match feature.get(*ot) {
+                                                                            Some(res) => *res as u64,
+                                                                            None => 0 as u64
+                                                                        }
+                                                                        })
+                                                                  .collect::<Vec<u64>>();
+                                  *v = map_to_vec;
+                              });
+                
+                for (v, ot) in transpose(feature_vector).iter().zip(ot_order_str) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, ot).as_str(), v));
+                }
+
+            },
+            ObjectPoint::ObjectOutputs => {
+                let ot_order = config.ocel.global_log["ocel:object-types"].as_array().unwrap().to_vec();
+                let ot_order_str: Vec<&str> = ot_order.iter().map(|s| s.as_str().unwrap()).collect();
+                let mut feature_vector: Vec<Vec<u64>> = vec![vec![0;ot_order.len()]; obj_str_vec.len()];
+                feature_vector.par_iter_mut()
+                              .enumerate()
+                              .for_each(|(i, v)| {
+                                  let feature = object_outputs(&config.ocel, config.ocel.object_map.get_by_left(obj_str_vec[i]).unwrap());
+                                  let map_to_vec = ot_order_str.iter().map(|ot| {
+                                                                        match feature.get(*ot) {
+                                                                            Some(res) => *res as u64,
+                                                                            None => 0 as u64
+                                                                        }
+                                                                        })
+                                                                  .collect::<Vec<u64>>();
+                                  *v = map_to_vec;
+                              });
+                
+                for (v, ot) in transpose(feature_vector).iter().zip(ot_order_str) {
+                    series_vec.push(Series::new(format!("{:?}:{:?}:count", feature, ot).as_str(), v));
+                }
+                
             },
             _ => {}
         }
@@ -435,6 +484,33 @@ pub fn object_direct_rel_count(ocdg: &Ocdg, oid: &usize, rel: &Relations) -> usi
 0
 }
 
+
+pub fn object_inputs(log: &Ocel, oid: &usize) -> HashMap<String, usize> {
+    if let Some(obj_src) = log.objects.get(oid) {
+        let first_event = obj_src.events.first().unwrap(); 
+        input_object_type_count(log, first_event)
+    } else {
+        HashMap::<String, usize>::new()
+    }
+}
+
+pub fn object_outputs(log: &Ocel, oid: &usize) -> HashMap<String, usize> {
+    let mut obj_outputs = HashMap::<String, usize>::new();
+    if let Some(obj_src) = log.objects.get(oid) {
+        for ev in &obj_src.events[1..] {
+            for (k, v) in output_object_type_count(log, ev) {
+                let ot_entry = obj_outputs.entry(k.clone()).or_default();
+                if k == obj_src.obj_type {
+                    *ot_entry += v - 1; // remove self
+                } else {
+                    *ot_entry += v
+                }
+            }
+        }
+    }
+    obj_outputs
+}
+
 pub fn object_subgraph_count() {todo!()}
 
 
@@ -582,14 +658,55 @@ mod tests {
     }
 
     #[test]
+    fn test_object_inputs() {
+        let oid = OCEL.object_map.get_by_left("o3").expect("cannot fail");
+        let obj_inputs_1 = object_inputs(&OCEL, oid);
+        assert_eq!(obj_inputs_1.is_empty(), true);
+
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        let obj_inputs_2 = object_inputs(&OCEL, oid);
+        assert_eq!(obj_inputs_2.is_empty(), false);
+        assert_eq!(obj_inputs_2.contains_key("package"), true);
+        assert_eq!(*obj_inputs_2.get("package").unwrap() as usize, 1);
+
+        let oid = OCEL.object_map.get_by_left("p1").expect("cannot fail");
+        let obj_inputs_3 = object_inputs(&OCEL, oid);
+        assert_eq!(obj_inputs_3.is_empty(), false);
+        assert_eq!(obj_inputs_3.contains_key("order"), false);
+        assert_eq!(obj_inputs_3.contains_key("item"), true);
+        assert_eq!(*obj_inputs_3.get("item").unwrap() as usize, 3);
+    }
+
+    #[test]
+    fn test_object_outputs() {
+        let oid = OCEL.object_map.get_by_left("o3").expect("cannot fail");
+        let obj_outputs_1 = object_outputs(&OCEL, oid);
+        assert_eq!(obj_outputs_1.is_empty(), true);
+
+        let oid = OCEL.object_map.get_by_left("r1").expect("cannot fail");
+        let obj_outputs_2 = object_outputs(&OCEL, oid);
+        assert_eq!(obj_outputs_2.is_empty(), true);
+
+        let oid = OCEL.object_map.get_by_left("p1").expect("cannot fail");
+        let obj_outputs_3 = object_outputs(&OCEL, oid);
+        assert_eq!(obj_outputs_3.is_empty(), false);
+        assert_eq!(obj_outputs_3.contains_key("order"), false);
+        assert_eq!(obj_outputs_3.contains_key("route"), true);
+        assert_eq!(*obj_outputs_3.get("route").unwrap() as usize, 2);
+    }
+
+    #[test]
     fn test_user_facing_suite() {
         let mut feature_vec: Vec<(ObjectPoint, Option<Value>)> = vec![];
         feature_vec.push((ObjectPoint::UniqueNeighborCount, None));
         feature_vec.push((ObjectPoint::ObjectWaitTime, Some(json!({"activity_src": "place order", "activity_tar": "receive payment"}))));
+        feature_vec.push((ObjectPoint::ObjectInputs, None));
+        feature_vec.push((ObjectPoint::ObjectOutputs, None));
         let config = ObjectPointConfig {ocel: &OCEL, ocdg: &OCDG, params: &feature_vec};
         let res = object_point_features(config);
-        println!("{}", res);
-        // assert_eq!(res[""].sum::<usize>().unwrap(), 9);
-        // assert_eq!(res["ActivityOhe:\"place order\":count"].sum::<usize>().unwrap(), 3);
+        // println!("{}",res);
+        assert_eq!(res["UniqueNeighborCount"].sum::<usize>().unwrap(), 66);
+        assert_eq!(res["ObjectInputs:\"package\":count"].sum::<usize>().unwrap(), 3);
+        assert_eq!(res["ObjectOutputs:\"route\":count"].sum::<usize>().unwrap(), 3);
     }
 }

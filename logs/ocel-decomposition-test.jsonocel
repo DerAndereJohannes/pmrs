@@ -1,0 +1,83 @@
+{
+  "ocel:global-log": {
+    "ocel:version": "0.1",
+    "ocel:ordering": "timestamp",
+    "ocel:attribute-names": [
+      "name",
+      "price",
+      "total",
+      "salary",
+      "resource",
+      "prepaid-amount",
+      "errors"
+    ],
+    "ocel:object-types": [
+      "item",
+      "order",
+      "worker"
+    ]
+  },
+  "ocel:global-event": {
+    "ocel:activity": "__INVALID__"
+  },
+  "ocel:global-object": {
+    "ocel:type": "__INVALID__"
+  },
+  "ocel:events": {
+    "e0": {
+      "ocel:activity": "Z",
+      "ocel:timestamp": "2022-01-01T9:00:00+01:00",
+      "ocel:omap": [
+        "i1"
+      ],
+      "ocel:vmap": {}
+    },
+    "e1": {
+      "ocel:activity": "A",
+      "ocel:timestamp": "2022-01-01T10:00:00+01:00",
+      "ocel:omap": [
+        "i1",
+        "p1"
+      ],
+      "ocel:vmap": {}
+    },
+    "e2": {
+      "ocel:activity": "A",
+      "ocel:timestamp": "2022-01-01T11:00:00+01:00",
+      "ocel:omap": [
+        "i1",
+        "p2"
+      ],
+      "ocel:vmap": {}
+    },
+    "e3": {
+      "ocel:activity": "B",
+      "ocel:timestamp": "2022-01-01T12:00:00+01:00",
+      "ocel:omap": [
+        "p1",
+        "p2",
+        "o1"
+      ],
+      "ocel:vmap": {}
+    }
+  },
+  "ocel:objects": {
+    "i1": {
+      "ocel:type": "a",
+      "ocel:ovmap": {}
+    },
+    "p1": {
+      "ocel:type": "b",
+      "ocel:ovmap": {}
+    },
+    "p2": {
+      "ocel:type": "b",
+      "ocel:ovmap": {}
+    },
+    "o1": {
+      "ocel:type": "c",
+      "ocel:ovmap": {}
+    }
+  }
+}
+

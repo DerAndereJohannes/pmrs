@@ -1,14 +1,14 @@
 pub(crate) mod variants;
 pub mod importer;
 pub mod exporter;
+pub mod decomposition;
 pub(crate) mod generation;
 
 use std::{collections::hash_map::Entry, vec, fmt};
 use ahash::AHashSet;
 use bimap::BiMap;
-use petgraph::graph::{DiGraph, NodeIndex, EdgeIndex};
+use petgraph::{graph::{NodeIndex, EdgeIndex}, stable_graph::StableDiGraph};
 use nohash_hasher::{IntSet, IntMap};
-use array_tool::vec::Intersect;
 use rayon::prelude::*;
 use num_enum::{TryFromPrimitive, IntoPrimitive};
 use strum::{EnumIter, EnumString};
@@ -163,10 +163,13 @@ impl Relations {
             },
             Relations::MINION => {
                    if src_oe.len() > tar_oe.len() {
-                       let common_events: Vec<_> = src_oe.intersect(tar_oe.to_vec()); 
-                       if common_events.len() == tar_oe.len() {
-                            to_add.push((oid1, oid2, EventAdd::MULTI(IntSet::<usize>::from_iter(common_events)), Relations::MINION));
+                       let src_set: AHashSet<&usize> = AHashSet::from_iter(src_oe);
+                       for ev in tar_oe {
+                            if !src_set.contains(ev) {
+                                return to_add;
+                            }
                        }
+                       to_add.push((oid1, oid2, EventAdd::MULTI(IntSet::<usize>::from_iter(tar_oe.iter().cloned())), Relations::MINION));
                    }
             },
             Relations::PEELER => {
@@ -221,11 +224,13 @@ pub enum EventAdd {
 #[derive(Debug, Default)]
 pub struct NodeInfo {
     pub node_type: String,
+    pub src_cut: IntSet<usize>,
+    pub tar_cut: IntSet<usize>
 }
 
 #[derive(Debug, Default)]
 pub struct Ocdg {
-    pub net: DiGraph<usize, usize>,
+    pub net: StableDiGraph<usize, usize>,
     pub edge_attributes: IntMap<usize, NodeInfo>,
     pub node_attributes: IntMap<usize, NodeInfo>,
     pub object_map: BiMap<String, usize>,
