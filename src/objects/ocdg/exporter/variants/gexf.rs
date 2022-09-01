@@ -32,8 +32,10 @@ pub(crate) fn ocdg_to_gexf(g: &Ocdg) -> Result<Gexf, Box<dyn Error>> {
         for (oid, data) in &g.node_attributes {
             let mut attrvalues: Vec<AttValueGexf> = vec![];
             attrvalues.push(AttValueGexf { attr: 0.to_string(), value: data.node_type.to_owned() });
-            attrvalues.push(AttValueGexf { attr: 1.to_string(), value: format!("{:?}", Vec::from_iter(data.src_cut.to_owned())).replace("\"", "'") });
-            attrvalues.push(AttValueGexf { attr: 2.to_string(), value: format!("{:?}", Vec::from_iter(data.tar_cut.to_owned())).replace("\"", "'") });
+            let src_cut_str: Vec<&String> = data.src_cut.iter().map(|ob| g.object_map.get_by_right(ob).expect("cannot fail")).collect();
+            let tar_cut_str: Vec<&String> = data.tar_cut.iter().map(|ob| g.object_map.get_by_right(ob).expect("cannot fail")).collect();
+            attrvalues.push(AttValueGexf { attr: 1.to_string(), value: format!("{:?}", src_cut_str).replace("\"", "'") });
+            attrvalues.push(AttValueGexf { attr: 2.to_string(), value: format!("{:?}", tar_cut_str).replace("\"", "'") });
 
             gexf_repr.graph.nodes.nodes.push(NodeGexf {id: oid.to_string(), label: g.object_map.get_by_right(oid).expect("This can't fail").to_owned(), attvalues: AttValuesGexf {attvalues: attrvalues}});
         }

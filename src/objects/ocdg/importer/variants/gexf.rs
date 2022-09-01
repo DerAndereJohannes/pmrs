@@ -1,5 +1,5 @@
-use std::{error::Error, fs::File, io::Read};
-use nohash_hasher::IntMap;
+use std::{error::Error, fs::File, io::Read, iter::FromIterator};
+use nohash_hasher::{IntMap, IntSet};
 
 use quick_xml::de::from_str;
 
@@ -12,23 +12,35 @@ pub fn import_gexf_ocdg(file_path: &str) -> Result<Ocdg, Box<dyn Error>> {
 
    let mut ocdg: Ocdg = Ocdg::default();
 
-   for obj in g.graph.nodes.nodes {
+   for obj in &g.graph.nodes.nodes {
        let oid = obj.id.parse::<usize>()?;
        let new_node = ocdg.net.add_node(oid);
-       ocdg.object_map.insert(obj.label, oid);
+       ocdg.object_map.insert(obj.label.to_owned(), oid);
 
        ocdg.node_attributes.entry(oid).or_default().node_type = obj.attvalues.attvalues[0].value.to_owned();
 
        ocdg.inodes.entry(oid).or_insert(new_node);
    }
 
-    let mut ev_id: usize = usize::MIN;
-   for ev in g.graph.edges.edges {
+   // add src_cuts and tar_cuts after object map is complete
+   for obj in g.graph.nodes.nodes {
+       let oid = obj.id.parse::<usize>()?;
+       let src_cut_prep = obj.attvalues.attvalues[1].value.replace("'", "\"");
+       let src_cut_decode: Vec<&str> = ron::from_str(src_cut_prep.as_str())?;
+       ocdg.node_attributes.entry(oid).or_default().src_cut = IntSet::from_iter(src_cut_decode.iter().map(|s| ocdg.object_map.get_by_left(*s).unwrap().to_owned()));
+       let tar_cut_prep = obj.attvalues.attvalues[2].value.replace("'", "\"");
+       let tar_cut_decode: Vec<&str> = ron::from_str(tar_cut_prep.as_str())?;
+       ocdg.node_attributes.entry(oid).or_default().tar_cut = IntSet::from_iter(tar_cut_decode.iter().map(|s| ocdg.object_map.get_by_left(*s).unwrap().to_owned()));
+   }
+
+   let mut ev_id: usize = usize::MIN;
+    for ev in g.graph.edges.edges {
        let src_o: usize = ev.source.parse::<usize>()?;
        let tar_o: usize = ev.target.parse::<usize>()?;
 
        for rel in ev.attvalues.attvalues {
-           let re: Vec<&str> = ron::from_str(&rel.value)?;
+           let rel_value_decode = rel.value.replace("'", "\"");
+           let re: Vec<&str> = ron::from_str(rel_value_decode.as_str())?;
            ocdg.irels.entry(src_o).or_default()
                      .entry(tar_o).or_default()
                      .entry(rel.attr.parse::<u8>()?)

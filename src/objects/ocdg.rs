@@ -4,7 +4,7 @@ pub mod exporter;
 pub mod decomposition;
 pub(crate) mod generation;
 
-use std::{collections::hash_map::Entry, vec, fmt};
+use std::{collections::hash_map::Entry, vec, fmt, error::Error};
 use ahash::AHashSet;
 use bimap::BiMap;
 use petgraph::{graph::{NodeIndex, EdgeIndex}, stable_graph::StableDiGraph};
@@ -15,6 +15,23 @@ use strum::{EnumIter, EnumString};
 
 use super::ocel::Ocel;
 
+
+#[derive(Debug, Clone)]
+pub struct RelationError;
+
+impl fmt::Display for RelationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Invalid Relation input in vector")
+    }
+}
+
+impl Error for RelationError {}
+
+pub trait OcdgRelations {
+    fn is_timeconscious(&self) -> bool;
+    fn is_directed(&self) -> bool;
+    fn is_multiproof(&self) -> bool;
+}
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, TryFromPrimitive, IntoPrimitive, EnumIter, EnumString)]
 #[repr(u8)]
@@ -31,6 +48,29 @@ pub enum Relations {
     MINION = 9,
     PEELER = 10,
     ENGAGES = 11
+}
+
+impl OcdgRelations for Relations {
+    fn is_timeconscious(&self) -> bool {
+        match self {
+            Relations::DESCENDANTS | Relations::INHERITANCE | Relations::SPLIT | Relations::CONSUMES => {true},
+            _ => {false}
+        }
+    }
+
+    fn is_directed(&self) -> bool {
+        match self {
+            Relations::DESCENDANTS | Relations::INHERITANCE | Relations::SPLIT | Relations::CONSUMES | Relations::MINION => {true},
+            _ => {false}
+        }
+    }
+
+    fn is_multiproof(&self) -> bool {
+        match self {
+            Relations::COLIFE | Relations::PEELER | Relations::ENGAGES => {true},
+            _ => {false}
+        }
+    }
 }
 
 impl fmt::Display for Relations {
