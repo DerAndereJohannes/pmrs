@@ -16,7 +16,7 @@ use strum::{EnumIter, EnumString};
 use super::ocel::Ocel;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RelationError;
 
 impl fmt::Display for RelationError {
@@ -47,7 +47,8 @@ pub enum Relations {
     MERGE = 8,
     MINION = 9,
     PEELER = 10,
-    ENGAGES = 11
+    ENGAGES = 11,
+    ASCENDANTS = 12
 }
 
 impl OcdgRelations for Relations {
@@ -60,7 +61,7 @@ impl OcdgRelations for Relations {
 
     fn is_directed(&self) -> bool {
         match self {
-            Relations::DESCENDANTS | Relations::INHERITANCE | Relations::SPLIT | Relations::CONSUMES | Relations::MINION => {true},
+            Relations::DESCENDANTS | Relations::INHERITANCE | Relations::SPLIT | Relations::CONSUMES | Relations::MINION | Relations::ASCENDANTS => {true},
             _ => {false}
         }
     }
@@ -101,7 +102,8 @@ impl Relations {
             Relations::MERGE => 8,
             Relations::MINION => 9,
             Relations::PEELER => 10,
-            Relations:: ENGAGES => 11
+            Relations:: ENGAGES => 11,
+            Relations::ASCENDANTS => 12
         }
     }
 
@@ -153,6 +155,11 @@ impl Relations {
             Relations::DESCENDANTS => {
                 if (src_oe[0] < tar_oe[0]) && src_oe.contains(&tar_oe[0]) {
                     to_add.push((oid1, oid2, EventAdd::SINGLE(tar_oe[0]), Relations::DESCENDANTS));
+                }
+            },
+            Relations::ASCENDANTS => {
+                if (src_oe[0] < tar_oe[0]) && src_oe.contains(&tar_oe[0]) {
+                    to_add.push((oid2, oid1, EventAdd::SINGLE(tar_oe[0]), Relations::ASCENDANTS));
                 }
             },
             Relations::COLIFE => { // one time

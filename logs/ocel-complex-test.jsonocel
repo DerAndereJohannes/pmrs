@@ -429,7 +429,9 @@
     },
     "o2": {
       "ocel:type": "order",
-      "ocel:ovmap": {}
+      "ocel:ovmap": {
+        "destination": 7
+      }
     },
     "o3": {
       "ocel:type": "order",
@@ -439,6 +441,7 @@
       "ocel:type": "item",
       "ocel:ovmap": {
         "name": "Laptop",
+        "category": "Electronics",
         "price": 2000.00
       }
     },
@@ -446,6 +449,7 @@
       "ocel:type": "item",
       "ocel:ovmap": {
         "name": "Monitor",
+        "category": "Electronics",
         "price": 449.99
       }
     },
@@ -453,16 +457,22 @@
       "ocel:type": "item",
       "ocel:ovmap": {
         "name": "Keyboard",
+        "category": "Electronics",
         "price": 50
       }
     },
     "i4": {
       "ocel:type": "item",
-      "ocel:ovmap": {}
+      "ocel:ovmap": {
+        "name": "Computer",
+        "category": "Electronics"
+      }
     },
     "i5": {
       "ocel:type": "item",
-      "ocel:ovmap": {}
+      "ocel:ovmap": {
+        "category": "Material"
+      }
     },
     "i6": {
       "ocel:type": "item",
