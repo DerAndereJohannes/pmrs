@@ -581,14 +581,13 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.48"
+version = "0.1.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "237a0714f28b1ee39ccec0770ccb544eb02c9ef2c82bb096230eefcffa6468b0"
+checksum = "fd911b35d940d2bd0bea0f9100068e5b97b51a1cbe13d13382f132e0365257a0"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
  "js-sys",
- "once_cell",
  "wasm-bindgen",
  "winapi",
 ]
@@ -1130,9 +1129,9 @@ dependencies = [
 
 [[package]]
 name = "polars"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "129ebcea4cce0a68668aac7df5ed788a0fa8edfeb7775a229b0d12d02783cf49"
+checksum = "d813db33da8d5919c3844bb14a665668ad77c9f1a0b2884f5cc2587729c52986"
 dependencies = [
  "polars-core",
  "polars-io",
@@ -1143,9 +1142,9 @@ dependencies = [
 
 [[package]]
 name = "polars-arrow"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc6d29c78ccecc37d74b846b3a2fa2045c6d27b8cf111502ed5e57c09819a755"
+checksum = "4792acb4ef6c13560c145c3be318bdf37611b8f6741fc2eacf04a16bf3e3c87e"
 dependencies = [
  "arrow2",
  "hashbrown",
@@ -1155,9 +1154,9 @@ dependencies = [
 
 [[package]]
 name = "polars-core"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4432fb6352bdebe6344bcd5826fcbcba6fbeb61c2abf485cbad90881dd569ad6"
+checksum = "636100bb11582494c4c9b69744d5a400ba478f2781be315d24b21c92a873c98d"
 dependencies = [
  "ahash 0.7.6",
  "anyhow",
@@ -1180,9 +1179,9 @@ dependencies = [
 
 [[package]]
 name = "polars-io"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa1351e5a8fd591a3396ff6e7f9b4a8009b58c155f19f52dd07cc5ad9ede1c15"
+checksum = "6c3d422fcd93accec84b22e84db5097f2f9705e023d940ce75dec8dfac5cd240"
 dependencies = [
  "ahash 0.7.6",
  "anyhow",
@@ -1206,9 +1205,9 @@ dependencies = [
 
 [[package]]
 name = "polars-lazy"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7e5202c63543f02a30bc1989a5b4cfee6d52612af8f07d83b23c6fd2ee040b9"
+checksum = "bc5aca09eea12cafdfc348cfb3ebce0e3b3967bb04752e1a1e7849349939d1f9"
 dependencies = [
  "ahash 0.7.6",
  "bitflags",
@@ -1225,9 +1224,9 @@ dependencies = [
 
 [[package]]
 name = "polars-ops"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44e5d2aba529b95952b64c58e28422f241984af94e67f07646fae4e61e8f9638"
+checksum = "061eadf5b54fb5d1273cfb9b0f52988abe41cf363e8fc51ff738b4a58e57f752"
 dependencies = [
  "polars-arrow",
  "polars-core",
@@ -1235,9 +1234,9 @@ dependencies = [
 
 [[package]]
 name = "polars-time"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3085b23580cffbdfccbbed47b1a4b6b72a53aee298e30251c69adfa5f2cc574d"
+checksum = "84b33580de09b3988c24b0d4bd49836158d8e6488af50d7efc33b5afa521d868"
 dependencies = [
  "chrono",
  "lexical",
@@ -1248,9 +1247,9 @@ dependencies = [
 
 [[package]]
 name = "polars-utils"
-version = "0.24.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc0e4feaf2b5aa827d8f5c1a3c458ec295d0a982fe04cf6087bf289ef465ef76"
+checksum = "026ecd1d99ae87a060dcde5ab51c2122c83e2f5a19b9d5832419049c4b31deb6"
 dependencies = [
  "parking_lot",
  "rayon",
@@ -1299,9 +1298,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.43"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2ca2c61bc9f3d74d2886294ab7b9853abd9c1ad903a3ac7815c58989bb7bab"
+checksum = "7bd7356a8122b6c4a24a82b278680c73357984ca2fc79a0f9fa6dea7dced7c58"
 dependencies = [
  "unicode-ident",
 ]
@@ -1491,18 +1490,18 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "serde"
-version = "1.0.144"
+version = "1.0.145"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f747710de3dcd43b88c9168773254e809d8ddbdf9653b84e2554ab219f17860"
+checksum = "728eb6351430bccb993660dfffc5a72f91ccc1295abaa8ce19b27ebe4f75568b"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.144"
+version = "1.0.145"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94ed3a816fb1d101812f83e789f888322c34e291f894f19590dc310963e87a00"
+checksum = "81fa1584d3d1bcacd84c277a0dfe21f5b0f6accf4a23d04d4c6d61f1af522b4c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1707,18 +1706,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c53f98874615aea268107765aa1ed8f6116782501d18e53d08b471733bea6c85"
+checksum = "0a99cb8c4b9a8ef0e7907cd3b617cc8dc04d571c4e73c8ae403d80ac160bb122"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8b463991b4eab2d801e724172285ec4195c650e8ec79b149e6c2a8e6dd3f783"
+checksum = "3a891860d3c8d66fec8e73ddb3765f90082374dbaaa833407b904a94f1a7eb43"
 dependencies = [
  "proc-macro2",
  "quote",

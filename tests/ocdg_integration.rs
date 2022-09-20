@@ -1,14 +1,23 @@
+use std::collections::HashSet;
+use std::iter::FromIterator;
+
+use ahash::HashMap;
+use pmrs::algo::transformation::ocel::situations::event_situations::{collect_event_targets, EventSituations, EventSituationParameters};
+use pmrs::algo::transformation::ocel::situations::situation_sublog::{generate_event_situation_sublog, ExtractionPlan};
 // use pmrs::objects::linker::link_objects;
 // use pmrs::objects::ocdg::exporter::export_ocdg;
-// use pmrs::objects::ocdg::{Ocdg, generate_ocdg, Relations};
-// use pmrs::objects::ocel::Ocel;
-// use pmrs::objects::ocel::importer::import_ocel;
+use pmrs::objects::ocdg::{generate_ocdg, Relations};
+use pmrs::objects::ocel::Ocel;
+use pmrs::objects::ocel::importer::import_ocel;
+use polars::prelude::DataFrame;
 // use pmrs::objects::ocel::exporter::export_ocel_pretty;
 // use pmrs::objects::ocdg::importer::import_ocdg;
 // use pmrs::algo::transformation::ocel::features::object_point::{ObjectPoint, ObjectPointConfig, object_point_features};
 // use serde_json::Value;
 // use std::collections::HashMap;
 // use std::time::Instant;
+// use std::thread;
+// use std::time;
 // use petgraph::dot::Dot;
 // use pmrs::objects::ocdg::decomposition::decompose_in_place;
 // use pmrs::objects::ocdg::exporter::export_ocdg;
@@ -17,24 +26,60 @@
 
 // #[test]
 // fn test_ocdg_generation() {
-//     let _relations: Vec<Relations> = vec![Relations::INTERACTS, 
-//                                          Relations::DESCENDANTS,
-//                                          Relations::COBIRTH,
-//                                          Relations::COLIFE,
-//                                          Relations::CODEATH,
-//                                          Relations::CONSUMES,
-//                                          Relations::INHERITANCE,
-//                                          Relations::PEELER,
-//                                          Relations::ENGAGES,
-//                                          Relations::MINION,
-//                                          Relations::SPLIT,
-//                                          Relations::MERGE];
+    // let relations: Vec<Relations> = vec![Relations::INTERACTS, 
+    //                                      Relations::DESCENDANTS,
+    //                                      Relations::COBIRTH,
+    //                                      Relations::COLIFE,
+    //                                      Relations::CODEATH,
+    //                                      Relations::CONSUMES,
+    //                                      Relations::INHERITANCE,
+    //                                      Relations::PEELER,
+    //                                      Relations::ENGAGES,
+    //                                      Relations::MINION,
+    //                                      Relations::SPLIT,
+    //                                      Relations::MERGE];
 
-//     let relations: Vec<Relations> = vec![Relations::DESCENDANTS];
-//     let default: Ocdg = generate_ocdg(&import_ocel("tests/test.jsonocel").expect("What did you do to the file?"), &relations);
-//     // export_ocdg(&default, "tests/th.gexf").unwrap();
-//     let decomposed: Ocdg = decompose_in_place(default);
-//     export_ocdg(&decomposed, "tests/descendants-decomposed.gexf").unwrap();
+    // let relations: Vec<Relations> = vec![Relations::DESCENDANTS, Relations::COBIRTH];
+
+    // // let logs: Vec<&str> = vec!["0.5m.jsonocel", "1m.jsonocel", "2m.jsonocel", "3m.jsonocel", "6m.jsonocel", "12m.jsonocel", "24m.jsonocel"];
+    // let log: Ocel = import_ocel("tests/test.jsonocel").unwrap();
+    // // let log: Ocel = import_ocel("logs/ocel-complex-test.jsonocel").unwrap();
+    // let ocdg = generate_ocdg(&log, &relations);
+
+    // let mut event_config = EventSituationParameters::default();
+    // event_config.activities = Some(HashSet::from_iter(vec!["fail delivery", "deliver package"]));
+
+    // let situations = collect_event_targets(&log, EventSituations::EventChoice, event_config); 
+    // println!("{:#?}", situations);
+
+    // let ext_plan = ExtractionPlan::PrefixRoot; 
+    // let df_vec: Vec<DataFrame> = Vec::with_capacity(situations.len());
+    // // let mut features: HashMap<String, Vec<>>
+
+    // for (eid, target) in situations {
+
+    //     let situation_sublogs = generate_event_situation_sublog(&log, ext_plan, &eid);
+
+    // }
+
+
+    // // thread::sleep(time::Duration::from_secs(5));
+    // // for log_path in logs {
+    // //     let log: Ocel = import_ocel(format!("tests/{log_path}").as_str()).unwrap();
+    // //     println!("Current log: {}, object #: {}, event #: {}", log_path, log.objects.len(), log.events.len());
+    // //     let start = Instant::now();
+    // //     let _ocdg = generate_ocdg(&log, &relations);
+    //     let end = Instant::now();
+
+    //     println!("OCDG generation took {:?}", end - start);
+    //     thread::sleep(time::Duration::from_secs(5));
+    // }
+
+    // let relations: Vec<Relations> = vec![Relations::DESCENDANTS];
+    // let default: Ocdg = generate_ocdg(&import_ocel("tests/test.jsonocel").expect("What did you do to the file?"), &relations);
+    // export_ocdg(&default, "tests/th.gexf").unwrap();
+    // let decomposed: Ocdg = decompose_in_place(default);
+    // export_ocdg(&decomposed, "tests/descendants-decomposed.gexf").unwrap();
     
 // }
 //     // let import_time = Instant::now();

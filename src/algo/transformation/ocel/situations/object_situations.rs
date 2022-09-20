@@ -5,7 +5,7 @@ use strum::{EnumString, IntoStaticStr, Display};
 use crate::objects::ocel::Ocel;
 
 lazy_static::lazy_static!{
-static ref NULLVALUES: Vec<Value> = vec![json!("NaN"), json!("NA"), json!("na"), json!("n/a")];
+static ref NULLVALUES: Vec<Value> = vec![json!("NaN"), json!("NA"), json!("na"), json!("n/a"), json!(null)];
 }
 
 #[derive(EnumString, IntoStaticStr, Display, Hash, Eq, PartialEq)]
