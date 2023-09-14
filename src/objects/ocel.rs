@@ -65,7 +65,7 @@ fn timezone_default_utc<'de, D: Deserializer<'de>>(d: D) -> Result<DateTime<Utc>
 
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Ocel {
     pub global_log: AHashMap<String, Value>,
     pub global_event: AHashMap<String, Value>,
@@ -111,3 +111,4 @@ impl PartialEq for OcelEvent {
         self.timestamp == other.timestamp
     }
 }
+
