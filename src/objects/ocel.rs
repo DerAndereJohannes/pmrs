@@ -56,7 +56,8 @@ fn timezone_default_utc<'de, D: Deserializer<'de>>(d: D) -> Result<DateTime<Utc>
             s.push('Z');
             match DateTime::parse_from_rfc3339(s.as_str()) {
                 Ok(dt) => {Ok(DateTime::<Utc>::from(dt))},
-                Err(_e) => {Ok(DateTime::<Utc>::from(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0)))}
+                Err(_e) => {Ok(DateTime::<Utc>::from(Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap()))}
+                // Err(_e) => {Ok(DateTime::<Utc>::from(Utc.ymd(1970, 1, 1).and_hms(0, 0, 0)))}
             }
         }
     }
